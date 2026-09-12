@@ -29,10 +29,10 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="mt-10 flex flex-col items-center text-center">
         <div className="relative h-24 w-24 overflow-hidden rounded-full ring-2 ring-gold">
           <Image
-            src="https://placehold.co/160x160/0B1F3A/D4AF37?text=ZZ"
+            src="/images/hero-portrait.png"
             alt={AGENT.name}
             fill
-            className="object-cover"
+            className="object-cover object-top"
           />
         </div>
         <p className="mt-3 font-semibold">{AGENT.name}</p>
