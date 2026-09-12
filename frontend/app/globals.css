@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-offwhite text-navy transition-colors duration-200 dark:bg-navy dark:text-offwhite;
+}

@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: zee-zafra-properties-api
+    env: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy
+    startCommand: node src/server.js
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      # Not read by the running server — only by prisma/seedAdmin.js, run
+      # manually (see backend/prisma/seedAdmin.js header comment) since
+      # Render's free tier has no shell access to run it in-place.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

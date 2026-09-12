@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Inquiry arrives in Phase 10.
+
+// Single admin identity, DB-backed (see Phase 3 notes in the roadmap for why
+// this was chosen over env-var-only credentials). No public sign-up route
+// exists anywhere in the app — the only way a row here is created is the
+// prisma/seedAdmin.js script, run manually.
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+enum PropertyType {
+  HOUSE_AND_LOT
+  CONDO
+  TOWNHOUSE
+  COMMERCIAL
+  VACANT_LOT
+}
+
+enum ListingType {
+  FOR_SALE
+  FOR_RENT
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  SOLD
+  RESERVED
+}
+
+model Property {
+  id          String         @id @default(cuid())
+  title       String
+  type        PropertyType
+  listingType ListingType
+  status      PropertyStatus @default(AVAILABLE)
+  price       Int
+  // Only meaningful when listingType is FOR_RENT (e.g. "month"). Left
+  // nullable rather than a second table since it's a single extra field.
+  rentPeriod  String?
+  location    String
+  // Nullable: vacant lots and some commercial listings don't have these.
+  beds        Int?
+  baths       Int?
+  carSpaces   Int?
+  sqm         Float
+  description String         @db.Text
+  // Cloudinary URLs from Phase 4 onward; placeholder URLs until then.
+  images      String[]
+  // Drives the homepage featured grid (Phase 6).
+  featured    Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
