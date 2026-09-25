@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "InquiryStatus" AS ENUM ('NEW', 'CONTACTED', 'FOLLOW_UP', 'VIEWING_SCHEDULED', 'NEGOTIATING', 'CLOSED_WON', 'CLOSED_LOST');
+
+-- AlterTable
+ALTER TABLE "Inquiry" ADD COLUMN     "status" "InquiryStatus" NOT NULL DEFAULT 'NEW';

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import ImageLightbox from "./ImageLightbox";
 
 export default function PropertyGallery({
   images,
@@ -12,10 +13,23 @@ export default function PropertyGallery({
 }) {
   const gallery = images.length > 0 ? images : ["https://placehold.co/1200x800/0B1F3A/12305C?text=Property"];
   const [active, setActive] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  // Clicking the main image or any thumbnail opens the fullscreen lightbox
+  // on that photo, rather than just swapping the main image in place.
+  function openLightbox(i: number) {
+    setActive(i);
+    setLightboxOpen(true);
+  }
 
   return (
     <div>
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-navy/5 dark:bg-white/5">
+      <button
+        type="button"
+        onClick={() => openLightbox(active)}
+        aria-label={`View photo ${active + 1} full size`}
+        className="relative aspect-[16/10] w-full cursor-zoom-in overflow-hidden rounded-2xl bg-navy/5 dark:bg-white/5"
+      >
         <Image
           src={gallery[active]}
           alt={title}
@@ -23,7 +37,7 @@ export default function PropertyGallery({
           priority
           className="object-cover"
         />
-      </div>
+      </button>
 
       {gallery.length > 1 && (
         <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
@@ -31,7 +45,7 @@ export default function PropertyGallery({
             <button
               key={src + i}
               type="button"
-              onClick={() => setActive(i)}
+              onClick={() => openLightbox(i)}
               aria-label={`Show photo ${i + 1}`}
               className={`relative h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition ${
                 i === active
@@ -44,6 +58,14 @@ export default function PropertyGallery({
           ))}
         </div>
       )}
+
+      <ImageLightbox
+        images={gallery}
+        initialIndex={active}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        title={title}
+      />
     </div>
   );
 }

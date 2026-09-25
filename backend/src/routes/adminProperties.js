@@ -101,6 +101,25 @@ function validatePropertyPayload(body, { partial = false } = {}) {
     data.rentPeriod = body.rentPeriod || null;
   }
 
+  // Phase 12. Same "provided, nullable" shape as rentPeriod above — the
+  // admin form sends null when the "price reduced" checkbox is off. Not
+  // required to be greater than `price`: a slightly-off entry shouldn't
+  // block saving the rest of the listing, it just won't trigger the
+  // "Price Reduced" badge on the frontend (that check lives there, not
+  // here — see PropertyCard.tsx / the detail page).
+  if (provided("originalPrice")) {
+    if (body.originalPrice === null || body.originalPrice === "") {
+      data.originalPrice = null;
+    } else {
+      const originalPrice = Number(body.originalPrice);
+      if (!Number.isFinite(originalPrice) || originalPrice < 0) {
+        errors.push("originalPrice must be a non-negative number or null");
+      } else {
+        data.originalPrice = Math.round(originalPrice);
+      }
+    }
+  }
+
   if (need("location")) {
     if (!body.location || typeof body.location !== "string") {
       errors.push("location is required");

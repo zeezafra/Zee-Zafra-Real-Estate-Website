@@ -38,6 +38,26 @@ export default async function AdminDashboardPage() {
         </div>
         <div className="flex gap-3">
           <Link
+            href="/admin/inquiries"
+            className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-navy/40"
+          >
+            Inquiries
+          </Link>
+          {/* Phase 16 */}
+          <Link
+            href="/admin/posts"
+            className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-navy/40"
+          >
+            Blog Posts
+          </Link>
+          {/* Phase 20 */}
+          <Link
+            href="/admin/analytics"
+            className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-navy/40"
+          >
+            Analytics
+          </Link>
+          <Link
             href="/admin/properties/new"
             className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-navy transition hover:bg-gold-light"
           >

@@ -5,3 +5,54 @@
 body {
   @apply bg-offwhite text-navy transition-colors duration-200 dark:bg-navy dark:text-offwhite;
 }
+
+/* Sidebar's nav column can overflow on short viewports (see Sidebar.tsx's
+   overflow-y-auto). Left un-styled it renders as the raw OS/browser
+   scrollbar track — a thin gray strip that reads as a bug next to the
+   navy/gold nav rather than part of the design. Track stays fully
+   transparent so it blends into the navy background at rest; the thumb
+   only appears (as a slim gold thread) once the sidebar itself is
+   hovered, so it's there when a visitor is actually scrolling and
+   invisible otherwise. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.sidebar-scroll:hover {
+  scrollbar-color: rgba(212, 175, 55, 0.45) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(212, 175, 55, 0.45);
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(212, 175, 55, 0.65);
+}
+
+/* ImageLightbox: each photo swap mounts a fresh element keyed by index
+   (see the component), so a plain CSS animation on mount is enough for a
+   crossfade/slide feel without a transition library. --lightbox-slide-from
+   is set inline per swap (24px/-24px/0px) so the slide direction matches
+   which arrow was pressed. */
+@keyframes lightbox-image-enter {
+  from {
+    opacity: 0;
+    transform: translateX(var(--lightbox-slide-from, 0px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.lightbox-image-enter {
+  animation: lightbox-image-enter 220ms ease-out;
+}

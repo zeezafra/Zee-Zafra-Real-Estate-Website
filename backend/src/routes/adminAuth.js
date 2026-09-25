@@ -4,6 +4,7 @@ const prisma = require("../lib/prisma");
 const { signAdminToken } = require("../lib/jwt");
 const { ADMIN_COOKIE_NAME, cookieOptions } = require("../lib/cookieOptions");
 const requireAdmin = require("../middleware/requireAdmin");
+const authRateLimit = require("../middleware/authRateLimit");
 
 const router = express.Router();
 
@@ -16,7 +17,10 @@ const router = express.Router();
 const DUMMY_HASH = bcrypt.hashSync("no-such-admin-account", 10);
 
 // POST /api/admin/login
-router.post("/login", async (req, res) => {
+// Phase 20: rate-limited against password guessing. Only failed attempts
+// count toward the limit (see middleware/authRateLimit.js), so Zee's own
+// logins can't lock him out.
+router.post("/login", authRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body || {};
 

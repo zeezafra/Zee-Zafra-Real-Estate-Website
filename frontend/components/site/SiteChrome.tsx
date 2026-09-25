@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import Sidebar from "./Sidebar";
 import ThemeToggle from "../theme/ThemeToggle";
+import SavedListingsLink from "./SavedListingsLink";
+import { useFocusTrap } from "@/lib/useFocusTrap";
 
 // Breakpoint call for "collapses appropriately on mobile": lg (1024px). A
 // fixed 288px sidebar plus a readable content column needs more room than
@@ -13,6 +15,28 @@ import ThemeToggle from "../theme/ThemeToggle";
 // carrying the same Sidebar content.
 export default function SiteChrome({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  useFocusTrap(drawerRef, mobileOpen);
+
+  // Escape-to-close and returning focus to the hamburger button match the
+  // same pattern InquiryModal uses (Phase 11 accessibility pass) — a
+  // keyboard user shouldn't need the mouse to close this, and shouldn't
+  // lose their place in the page afterwards.
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMobileOpen(false);
+    }
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      menuButtonRef.current?.focus();
+    };
+  }, [mobileOpen]);
 
   return (
     <>
@@ -25,8 +49,10 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
           <span className="text-gold">Zee Zafra</span> Properties
         </Link>
         <div className="flex items-center gap-3">
+          <SavedListingsLink className="text-navy transition hover:text-gold dark:text-offwhite" />
           <ThemeToggle />
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setMobileOpen(true)}
             aria-label="Open menu"
@@ -45,7 +71,13 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
             onClick={() => setMobileOpen(false)}
             className="absolute inset-0 bg-navy/60"
           />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw]">
+          <div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site navigation"
+            className="absolute inset-y-0 left-0 w-72 max-w-[85vw]"
+          >
             <div className="relative h-full">
               <button
                 type="button"

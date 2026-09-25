@@ -7,8 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Inquiry arrives in Phase 10.
-
 // Single admin identity, DB-backed (see Phase 3 notes in the roadmap for why
 // this was chosen over env-var-only credentials). No public sign-up route
 // exists anywhere in the app — the only way a row here is created is the
@@ -41,26 +39,253 @@ enum PropertyStatus {
 }
 
 model Property {
-  id          String         @id @default(cuid())
-  title       String
-  type        PropertyType
-  listingType ListingType
-  status      PropertyStatus @default(AVAILABLE)
-  price       Int
+  id            String         @id @default(cuid())
+  // Phase 12: short human-facing identifier (formatted as "ZZ-0001" in the
+  // frontend — see frontend/lib/format.ts) for when a listing needs to be
+  // referenced in conversation — a phone call, a Facebook DM — where the
+  // cuid `id` used in URLs is unwieldy to read aloud. A plain sequential
+  // Int, not part of the primary key, so it doesn't touch how `id` is
+  // generated or how any existing relation/URL works.
+  refNo         Int            @unique @default(autoincrement())
+  title         String
+  type          PropertyType
+  listingType   ListingType
+  status        PropertyStatus @default(AVAILABLE)
+  price         Int
+  // Phase 12: set by the admin when a listing's price has been cut, so the
+  // frontend can show a "Price Reduced" badge and a struck-through original
+  // price next to the current one. Deliberately not an automatic
+  // price-history table — that's a bigger feature than this phase calls
+  // for; the admin just enters what the price used to be. Only meaningful
+  // (badge shows) when it's actually greater than the current `price` —
+  // see PropertyCard.tsx / the detail page for that check.
+  originalPrice Int?
   // Only meaningful when listingType is FOR_RENT (e.g. "month"). Left
   // nullable rather than a second table since it's a single extra field.
-  rentPeriod  String?
-  location    String
+  rentPeriod    String?
+  location      String
   // Nullable: vacant lots and some commercial listings don't have these.
-  beds        Int?
-  baths       Int?
-  carSpaces   Int?
-  sqm         Float
-  description String         @db.Text
+  beds          Int?
+  baths         Int?
+  carSpaces     Int?
+  sqm           Float
+  description   String         @db.Text
   // Cloudinary URLs from Phase 4 onward; placeholder URLs until then.
-  images      String[]
+  images        String[]
   // Drives the homepage featured grid (Phase 6).
-  featured    Boolean        @default(false)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  featured      Boolean        @default(false)
+  // Phase 23 (UI/UX Phase 7 — Security, Analytics & Optimization).
+  // Incremented once per GET /api/properties/:id request — a simple
+  // running counter, not a `PropertyView` events table, per the roadmap's
+  // own note to start with the simpler counter unless time-series trends
+  // are actually needed. Powers "Most-Viewed Properties" in the admin
+  // analytics page, same way inquiry counts already power "Top
+  // Properties by Inquiries" there.
+  viewCount     Int            @default(0)
+  // Phase 24 (UI/UX Phase 7, most-favorited analytics). Same shape and same
+  // reasoning as `viewCount` above — favorites live only in each visitor's
+  // `localStorage` (Phase 12), so there's no server-side table to aggregate
+  // from. Incremented/decremented by the heart button (SaveButton.tsx) via
+  // POST/DELETE /api/properties/:id/favorite, floored at 0 rather than a
+  // `PropertyFavorite` events table, per this project's "start with the
+  // simpler counter" precedent.
+  favoriteCount Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  // Phase 10: inquiries that named this property. Purely a reverse lookup —
+  // nothing here changes when a property is edited or deleted (see
+  // Inquiry.property below for what happens on delete).
+  inquiries     Inquiry[]
+}
+
+// Phase 13: distinguishes a normal buyer-side lead (nav "Inquire Now", CTA
+// banner, per-property detail page — all default to BUYER, unchanged since
+// Phase 10) from a seller-side lead submitted via /sell, where the visitor
+// wants Zee to list *their* property rather than asking about one already
+// on the site. One table, one admin inbox — just a way to tell the two
+// apart without a second model.
+enum InquiryType {
+  BUYER
+  SELLER
+}
+
+// Phase 10. Public lead-capture: the "Inquire Now" button (nav + property
+// detail page) and the closing CTA banner's "Get in Touch" both submit here
+// via POST /api/inquiries. No AdminUser-style auth on the write side — this
+// is the one table the public can write to — but it IS rate-limited (see
+// the route) since it's also the site's one open write surface.
+// Phase 16: Zee's own market-insights blog. Deliberately its own model,
+// not reusing Inquiry/Property patterns beyond the shape (id/timestamps) —
+// a post has nothing to do with a listing or a lead. `published` gates
+// what the public API returns; the admin list endpoint ignores it so Zee
+// can save a draft and come back to it later.
+//
+// `createdAt` doubles as the post's display/sort date, same as how
+// Property already uses it for the "newest" sort — no separate
+// `publishedAt` column. That means backdating or scheduling a post isn't
+// possible yet (editing later touches `updatedAt`, not the date shown to
+// readers); matches this codebase's existing "plain data until volume
+// justifies more structure" call (see the schema comments on `rentPeriod`
+// and the Phase 13 seller fields) — flag to Zee if he wants to schedule
+// posts ahead of publish once he's writing these regularly.
+model Post {
+  id         String   @id @default(cuid())
+  // URL segment for /blog/[slug] — chosen by (or suggested to) the admin
+  // at creation, not auto-derived from title on every save, so editing a
+  // published post's title later doesn't silently break a link someone
+  // already shared. Enforced unique at the DB level; the admin route
+  // surfaces a friendly error on collision (see adminPosts.js).
+  slug       String   @unique
+  title      String
+  // Short teaser shown on /blog and the homepage section — kept as its
+  // own field rather than truncating `content`, so Zee can write a
+  // proper one- or two-sentence hook instead of whatever the first N
+  // characters of the post happen to be.
+  excerpt    String
+  content    String   @db.Text
+  // Reuses the existing Cloudinary upload endpoint
+  // (POST /api/admin/upload) — no new upload route needed, just one URL
+  // instead of the array Property.images uses.
+  coverImage String?
+  published  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// Phase 18. Mirrors a small sales-pipeline funnel rather than a bare
+// read/unread flag — CLOSED_WON and CLOSED_LOST are kept as two distinct
+// terminal states (not a single CLOSED) specifically so Phase 20's
+// conversion-rate reporting can divide won-by-total without a second
+// migration to split them back apart later.
+// Phase 20. Where a lead came in from — the "lead sources" half of the
+// analytics task. Set by the frontend at each call site rather than
+// inferred from propertyId/type on the backend, because two different
+// buttons (the nav "Inquire Now" and the closing CTA banner's "Get in
+// Touch") produce byte-identical payloads otherwise, and knowing which
+// one converts better is the entire point of tracking this.
+//
+// DIRECT is the default, so every pre-Phase-20 row backfills as "source
+// unknown" rather than being silently misattributed to a real source.
+enum InquirySource {
+  NAV_CTA
+  PROPERTY_PAGE
+  CTA_BANNER
+  VIEWING_FORM
+  SELL_PAGE
+  DIRECT
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  FOLLOW_UP
+  VIEWING_SCHEDULED
+  NEGOTIATING
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+model Inquiry {
+  id         String      @id @default(cuid())
+  // Phase 13. Defaults to BUYER so every existing inquiry (and every
+  // buyer-side submission going forward) needs no change at the call
+  // site — only /sell's SellerLeadForm sends "SELLER" explicitly.
+  type       InquiryType @default(BUYER)
+  // Phase 18. Defaults to NEW so every pre-existing row backfills as an
+  // unworked lead rather than requiring a manual data migration.
+  status     InquiryStatus @default(NEW)
+  name       String
+  // At least one of email/phone is required — enforced in the route
+  // validator, not the schema, since "at least one of two nullable
+  // columns" isn't expressible as a Postgres/Prisma column constraint
+  // without a raw CHECK constraint, which felt like more ceremony than a
+  // single-admin, low-volume inbox needs.
+  email      String?
+  phone      String?
+  message    String      @db.Text
+  propertyId String?
+  // Deliberately SetNull, not Cascade: if a listing is later deleted, the
+  // lead that asked about it is still worth keeping in the inbox — it just
+  // stops pointing at a specific property.
+  property   Property?   @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  // Phase 14: set only by the property detail page's "Book a Viewing"
+  // form (ViewingModal) — every other caller (nav "Inquire Now", CTA
+  // banner, /sell) leaves both null. Plain nullable Strings rather than a
+  // DateTime/@db.Time pair on purpose: these are a visitor's typed
+  // *preference*, not a confirmed, timezone-aware appointment (there's no
+  // calendar sync or admin confirmation flow yet) — storing the raw
+  // "YYYY-MM-DD" / "HH:MM" strings the <input type="date">/<input
+  // type="time"> elements already produce avoids a UTC-vs-local
+  // off-by-one-day class of bug for zero real benefit at this stage.
+  // Formatted for display by formatPreferredDate/formatPreferredTime in
+  // frontend/lib/format.ts. Same "plain data until volume justifies more
+  // structure" call this codebase already made for rentPeriod/the
+  // Phase 13 seller fields.
+  preferredDate String?
+  preferredTime String?
+  // Phase 19. Follow-up tracking: `nextFollowUpDate` is an admin-set plain
+  // "YYYY-MM-DD" (same string-not-DateTime call as preferredDate above,
+  // for the same reason — it's a target date on a to-do list, not a
+  // timestamped event) shown with an "overdue" treatment once it's in the
+  // past and the inquiry isn't closed. `lastContactedAt` IS a real
+  // DateTime, since it records something that actually happened (a status
+  // change was made) rather than a plan — auto-stamped by the PATCH route
+  // whenever status moves away from NEW, so the admin doesn't have to
+  // remember to log it separately.
+  nextFollowUpDate String?
+  lastContactedAt  DateTime?
+  // Phase 19. Archiving is separate from status — a CLOSED_LOST lead is
+  // still visible by default (it's a completed record worth glancing
+  // back at), archived is purely "get this out of my default view."
+  // Bulk-settable from the inbox's checkbox selection.
+  archived   Boolean     @default(false)
+  // Phase 20. Spam is deliberately a separate axis from `archived` and
+  // `status`, for the same reason archiving was kept separate in Phase 19:
+  // a flagged submission is hidden from the default inbox but NOT deleted,
+  // so a false positive is recoverable (Zee un-flags it from the Spam view)
+  // and the analytics endpoint can report how much was blocked. Every
+  // aggregate query in adminAnalytics.js and the stats endpoint excludes
+  // spam = true.
+  spam       Boolean     @default(false)
+  // Phase 20. See the InquirySource enum comment — set per call site by
+  // the frontend, powers the lead-source breakdown.
+  source     InquirySource @default(DIRECT)
+  // Phase 20. Stamped by the PATCH route when status moves into
+  // CLOSED_WON/CLOSED_LOST, cleared if it moves back out. A real DateTime
+  // (same reasoning as lastContactedAt): it records something that
+  // happened, not a plan. Exists so "average days to close" is a
+  // subtraction rather than a guess — deriving it from the InquiryNote
+  // timeline would mean parsing note text, which is display copy, not data.
+  closedAt   DateTime?
+  notes      InquiryNote[]
+  createdAt  DateTime    @default(now())
+
+  // Phase 20. The analytics endpoint groups by these three columns on
+  // every request; the inbox filters on spam/archived on every page load.
+  // Cheap to add now, before the table has enough rows for a sequential
+  // scan to be noticeable.
+  @@index([propertyId])
+  @@index([status])
+  @@index([spam, archived])
+}
+
+// Phase 19. Doubles as the activity timeline: MANUAL entries are typed by
+// the admin (a call log, an SMS follow-up, a viewing outcome), SYSTEM
+// entries are auto-created by the backend whenever `status` changes via
+// PATCH /api/admin/inquiries/:id or the bulk endpoint, so the timeline
+// reads as one chronological record without the admin having to log
+// status changes by hand. Cascade delete: a note with no inquiry to
+// belong to isn't meaningful data on its own.
+enum InquiryNoteType {
+  MANUAL
+  SYSTEM
+}
+
+model InquiryNote {
+  id        String          @id @default(cuid())
+  inquiry   Inquiry         @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  inquiryId String
+  type      InquiryNoteType @default(MANUAL)
+  content   String          @db.Text
+  createdAt DateTime        @default(now())
 }

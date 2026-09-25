@@ -48,6 +48,7 @@ export default function NavSearch() {
         onBlur={() => {
           if (!value) setOpen(false);
         }}
+        aria-label="Search title or location"
         placeholder="Search title or location"
         className="w-40 bg-transparent text-sm text-offwhite placeholder:text-offwhite/50 focus:outline-none"
       />

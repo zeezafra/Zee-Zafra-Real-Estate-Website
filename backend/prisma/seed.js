@@ -9,12 +9,18 @@ const placeholderImage =
 // 8 listings — clearly placeholder data, not real inventory. Spans all
 // five PropertyType values and both ListingType values, with a mix of
 // featured true/false so the Phase 6 homepage grid has something to show.
+// Two listings set `originalPrice` (Phase 12) so the "Price Reduced" badge
+// has something to show immediately after reseeding. `refNo` isn't set
+// here — it's a SERIAL column that assigns itself on insert.
 const listings = [
   {
     title: "Modern House and Lot in Talisay",
     type: "HOUSE_AND_LOT",
     listingType: "FOR_SALE",
     price: 8500000,
+    // Phase 12 demo data — shows the "Price Reduced" badge on this listing
+    // out of the box after reseeding, without needing an admin edit first.
+    originalPrice: 9200000,
     location: "Talisay City, Negros Occidental",
     beds: 4,
     baths: 3,
@@ -86,6 +92,7 @@ const listings = [
     listingType: "FOR_RENT",
     rentPeriod: "month",
     price: 18000,
+    originalPrice: 21000,
     location: "Bacolod City, Negros Occidental",
     beds: 1,
     baths: 1,

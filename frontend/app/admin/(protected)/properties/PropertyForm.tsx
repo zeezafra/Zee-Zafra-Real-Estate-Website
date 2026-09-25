@@ -20,6 +20,11 @@ type FormState = {
   listingType: string;
   status: string;
   price: string;
+  // Phase 12. `priceReduced` is UI-only — it just toggles whether the
+  // Original Price field shows — the payload derives originalPrice from
+  // both (null when unchecked) rather than sending this boolean anywhere.
+  priceReduced: boolean;
+  originalPrice: string;
   rentPeriod: string;
   location: string;
   beds: string;
@@ -37,6 +42,8 @@ function toFormState(property?: Property): FormState {
     listingType: property?.listingType ?? LISTING_TYPES[0].value,
     status: property?.status ?? "AVAILABLE",
     price: property ? String(property.price) : "",
+    priceReduced: property?.originalPrice != null,
+    originalPrice: property?.originalPrice != null ? String(property.originalPrice) : "",
     rentPeriod: property?.rentPeriod ?? "",
     location: property?.location ?? "",
     beds: property?.beds != null ? String(property.beds) : "",
@@ -115,6 +122,7 @@ export default function PropertyForm({ apiUrl, property }: Props) {
         listingType: form.listingType,
         status: form.status,
         price: Number(form.price),
+        originalPrice: form.priceReduced && form.originalPrice ? Number(form.originalPrice) : null,
         rentPeriod: form.listingType === "FOR_RENT" ? form.rentPeriod || null : null,
         location: form.location,
         beds: form.beds === "" ? null : Number(form.beds),
@@ -222,7 +230,33 @@ export default function PropertyForm({ apiUrl, property }: Props) {
             onChange={(e) => updateField("price", e.target.value)}
             className={inputClass}
           />
+          <span className="mt-1 text-xs font-normal text-navy/50">
+            Leave as 0 to show &ldquo;Price Upon Request&rdquo; instead of a peso amount.
+          </span>
         </label>
+
+        <label className="flex items-center gap-2 text-sm font-medium text-navy sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={form.priceReduced}
+            onChange={(e) => updateField("priceReduced", e.target.checked)}
+            className="h-4 w-4 rounded border-navy/30 text-gold focus:ring-gold"
+          />
+          Price reduced from a higher original price
+        </label>
+
+        {form.priceReduced && (
+          <label className={labelClass}>
+            Original Price (₱)
+            <input
+              type="number"
+              min="0"
+              value={form.originalPrice}
+              onChange={(e) => updateField("originalPrice", e.target.value)}
+              className={inputClass}
+            />
+          </label>
+        )}
 
         {form.listingType === "FOR_RENT" && (
           <label className={labelClass}>

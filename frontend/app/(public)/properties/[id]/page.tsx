@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bath, Bed, Car, MapPin, Ruler } from "lucide-react";
+import Link from "next/link";
 import { getPropertyById } from "@/lib/api";
 import { PROPERTY_STATUSES, PROPERTY_TYPES } from "@/lib/types";
+import { formatPrice, formatRefNo, isPriceOnRequest, isPriceReduced } from "@/lib/format";
+import { SITE_URL } from "@/lib/siteConfig";
+import { slugify } from "@/lib/slug";
 import PropertyGallery from "@/components/site/PropertyGallery";
+import InquireButton from "@/components/site/InquireButton";
+import BookViewingButton from "@/components/site/BookViewingButton";
+import SaveButton from "@/components/site/SaveButton";
+import ShareButtons from "@/components/site/ShareButtons";
+import MoreProperties from "@/components/site/MoreProperties";
 
 type Props = { params: { id: string } };
 
@@ -20,16 +28,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: property.title,
-    description: `${property.title} in ${property.location} — ₱${property.price.toLocaleString()}${
-      property.listingType === "FOR_RENT" && property.rentPeriod
+    description: `${property.title} in ${property.location} — ${formatPrice(property)}${
+      !isPriceOnRequest(property) && property.listingType === "FOR_RENT" && property.rentPeriod
         ? ` / ${property.rentPeriod}`
         : ""
     }. ${property.description.slice(0, 140)}`,
-    openGraph: {
-      title: property.title,
-      description: property.description.slice(0, 140),
-      images: property.images.length > 0 ? [property.images[0]] : undefined,
-    },
+    // Only set openGraph when there's a real photo — returning this key at
+    // all replaces the root layout's default entirely (Next doesn't merge
+    // per-field), so a listing with no images yet should just omit it and
+    // inherit the generated app/opengraph-image.tsx card instead of no
+    // image at all.
+    ...(property.images.length > 0 && {
+      openGraph: {
+        title: property.title,
+        description: property.description.slice(0, 140),
+        images: [property.images[0]],
+      },
+    }),
   };
 }
 
@@ -43,6 +58,7 @@ export default async function PropertyDetailPage({ params }: Props) {
   const typeLabel = PROPERTY_TYPES.find((t) => t.value === property.type)?.label ?? property.type;
   const statusLabel =
     PROPERTY_STATUSES.find((s) => s.value === property.status)?.label ?? property.status;
+  const priceReduced = isPriceReduced(property);
 
   const stats = [
     property.beds !== null && { icon: Bed, label: "Beds", value: `${property.beds}` },
@@ -56,9 +72,14 @@ export default async function PropertyDetailPage({ params }: Props) {
   ].filter(Boolean) as { icon: typeof Bed; label: string; value: string }[];
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-16 lg:px-10">
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_1fr]">
-        <div>
+    <>
+      <main className="mx-auto max-w-6xl px-6 py-16 lg:px-10">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_1fr]">
+        {/* min-w-0 overrides the Grid default of min-width: auto, which
+            otherwise lets this column's content (the thumbnail strip)
+            stretch the column past its 1.6fr share once there are enough
+            photos, instead of scrolling inside PropertyGallery. */}
+        <div className="min-w-0">
           <PropertyGallery images={property.images} title={property.title} />
 
           <div className="mt-8 border-t border-navy/10 pt-8 dark:border-offwhite/10">
@@ -79,6 +100,11 @@ export default async function PropertyDetailPage({ params }: Props) {
             <span className="rounded-full border border-navy/20 px-3 py-1 text-xs font-medium text-navy/70 dark:border-offwhite/20 dark:text-offwhite/70">
               {typeLabel}
             </span>
+            {priceReduced && (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                Price Reduced
+              </span>
+            )}
             {property.status !== "AVAILABLE" && (
               <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-600 dark:text-red-400">
                 {statusLabel}
@@ -91,18 +117,41 @@ export default async function PropertyDetailPage({ params }: Props) {
           </h1>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-navy/60 dark:text-offwhite/60">
             <MapPin size={15} className="shrink-0" />
-            {property.location}
+            {/* Phase 15: links to this listing's neighborhood landing
+                page. Only added here, not PropertyCard — the card's
+                location text sits inside its whole-card <Link>, and a
+                nested <a> would be invalid HTML (same constraint that put
+                SaveButton outside the card's Link in Phase 12). */}
+            <Link
+              href={`/areas/${slugify(property.location)}`}
+              className="underline decoration-transparent underline-offset-2 transition hover:text-gold hover:decoration-gold"
+            >
+              {property.location}
+            </Link>
+            {/* Phase 12 reference number — see lib/format.ts */}
+            <span className="ml-1 text-xs font-medium uppercase tracking-wide text-navy/40 dark:text-offwhite/40">
+              · {formatRefNo(property.refNo)}
+            </span>
           </p>
 
-          <p className="mt-4 text-3xl font-bold text-navy dark:text-gold">
-            ₱{property.price.toLocaleString()}
-            {property.listingType === "FOR_RENT" && property.rentPeriod && (
-              <span className="text-base font-normal text-navy/60 dark:text-offwhite/60">
-                {" "}
-                / {property.rentPeriod}
-              </span>
+          <div className="mt-4">
+            {priceReduced && (
+              <p className="text-base font-medium text-navy/40 line-through dark:text-offwhite/40">
+                ₱{property.originalPrice!.toLocaleString()}
+              </p>
             )}
-          </p>
+            <p className="text-3xl font-bold text-navy dark:text-gold">
+              {formatPrice(property)}
+              {!isPriceOnRequest(property) &&
+                property.listingType === "FOR_RENT" &&
+                property.rentPeriod && (
+                  <span className="text-base font-normal text-navy/60 dark:text-offwhite/60">
+                    {" "}
+                    / {property.rentPeriod}
+                  </span>
+                )}
+            </p>
+          </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3 border-y border-navy/10 py-5 dark:border-offwhite/10">
             {stats.map((stat) => (
@@ -118,16 +167,40 @@ export default async function PropertyDetailPage({ params }: Props) {
             ))}
           </div>
 
-          {/* Real lead-capture form/modal lands in Phase 10 — for now this
-              matches TopNav's "Inquire Now" and routes to /contact. */}
-          <Link
-            href="/contact"
+          {/* Phase 10: opens the shared InquiryModal pre-filled with this
+              property, instead of the Phase 7 placeholder link to /contact. */}
+          <InquireButton
+            propertyId={property.id}
+            propertyTitle={property.title}
+            source="PROPERTY_PAGE"
             className="mt-6 flex w-full items-center justify-center rounded-full bg-gold px-6 py-3 font-semibold text-navy transition hover:bg-gold-light"
-          >
-            Inquire Now
-          </Link>
+          />
+
+          {/* Phase 14: opens ViewingModal pre-filled with this property,
+              for a specific preferred date/time rather than an open-ended
+              message. Property-page-only — see BookViewingButton. */}
+          <BookViewingButton
+            propertyId={property.id}
+            propertyTitle={property.title}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-gold px-6 py-3 font-semibold text-navy transition hover:bg-gold/10 dark:text-offwhite"
+          />
+
+          {/* Phase 12: localStorage-backed, see lib/useSavedListings.ts. */}
+          <SaveButton
+            propertyId={property.id}
+            variant="button"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-navy/20 px-6 py-3 font-semibold text-navy transition hover:border-gold hover:text-gold dark:border-offwhite/20 dark:text-offwhite"
+          />
+
+          <ShareButtons
+            url={`${SITE_URL}/properties/${property.id}`}
+            title={property.title}
+            className="mt-6 border-t border-navy/10 pt-5 dark:border-offwhite/10"
+          />
         </aside>
       </div>
     </main>
+    <MoreProperties excludeId={property.id} />
+    </>
   );
 }

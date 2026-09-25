@@ -1,17 +1,26 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import InquireButton from "./InquireButton";
 
 // The reference screenshot's homepage closes on a full-bleed photo band
 // with a short prompt and a "Get in Touch" button — the roadmap's Visual
 // System section calls this out, but no earlier phase actually built it as
 // a section (Phase 6 only covers the category strip + featured grid).
-// Building it now that Zee has supplied the background photo for it.
+// Built once Zee supplied the background photo for it.
 //
-// The button links to /contact, same as TopNav's "Inquire Now" — that route
-// doesn't exist until Phase 9, and neither button is wired to actually
-// submit anything until Phase 10's Inquiry table/endpoint. Both are
-// pre-existing gaps this section just stays consistent with, not new ones.
+// "Get in Touch" opens the shared InquiryModal (Phase 10) — it used to
+// link to /contact before the modal existed; /contact itself still exists
+// as a page with direct contact details, just no longer the only way to
+// reach out from here.
+//
+// Phase 13 follow-up: a quiet text link to /sell under the headline. The
+// banner's primary ask is buyer-facing, so a second gold button would
+// compete with "Get in Touch" — a subordinate text link gives sellers a
+// second, low-friction path without changing the banner's priority.
+// /sell is still deliberately excluded from the six-item main nav; only
+// how people find it changed. Previously the Services page's "Selling"
+// card was the only entry point — this is the second.
 export default function CTABanner() {
   return (
     <section className="relative isolate overflow-hidden">
@@ -33,15 +42,22 @@ export default function CTABanner() {
             your next business space, I&rsquo;m here to help you every step
             of the way.
           </p>
+          <Link
+            href="/sell"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-offwhite/80 underline decoration-offwhite/40 underline-offset-4 transition hover:text-gold hover:decoration-gold"
+          >
+            Thinking of selling instead? Get a free valuation
+            <ArrowRight size={13} />
+          </Link>
         </div>
 
-        <Link
-          href="/contact"
+        <InquireButton
+          source="CTA_BANNER"
           className="flex shrink-0 items-center gap-2 rounded-full bg-gold px-6 py-3 font-semibold text-navy transition hover:bg-gold-light"
         >
           Get in Touch
           <ArrowRight size={16} />
-        </Link>
+        </InquireButton>
       </div>
     </section>
   );

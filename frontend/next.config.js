@@ -1,6 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Phase 24 (UI/UX Phase 7 — Performance). Next serves WebP by default
+    // already; AVIF is added ahead of it since it typically re-encodes
+    // photographic content (every property photo here) noticeably smaller
+    // than WebP at the same visual quality. Next tries formats in this
+    // order and falls back to the original when a browser accepts neither.
+    formats: ["image/avif", "image/webp"],
     remotePatterns: [
       // Placeholder hero/portrait/profile imagery until real photography
       // is supplied.
@@ -8,6 +14,27 @@ const nextConfig = {
       // Property photos uploaded via the Phase 4 admin panel.
       { protocol: "https", hostname: "res.cloudinary.com" },
     ],
+  },
+  // Phase 11 hardening — baseline headers a security/Lighthouse pass checks
+  // for. Deliberately not a full Content-Security-Policy here: a CSP needs
+  // to explicitly list every external source (Cloudinary images, any fonts
+  // added later) and one wrong entry silently breaks the page, so that's
+  // worth its own careful pass once the asset list is final rather than
+  // shipping one unverified now.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
   },
 };
 

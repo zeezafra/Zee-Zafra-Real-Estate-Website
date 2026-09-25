@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Property } from "@/lib/types";
+import { formatPrice, formatRefNo, isPriceOnRequest, isPriceReduced } from "@/lib/format";
 
 export default function PropertiesTable({
   properties,
@@ -59,6 +60,7 @@ export default function PropertiesTable({
       <table className="w-full min-w-[760px] text-left text-sm">
         <thead className="bg-navy/5 text-navy/70">
           <tr>
+            <th className="px-4 py-3 font-medium">Ref #</th>
             <th className="px-4 py-3 font-medium">Title</th>
             <th className="px-4 py-3 font-medium">Type</th>
             <th className="px-4 py-3 font-medium">Listing</th>
@@ -71,15 +73,25 @@ export default function PropertiesTable({
         <tbody>
           {properties.map((property) => (
             <tr key={property.id} className="border-t border-navy/10">
+              <td className="px-4 py-3 font-mono text-xs text-navy/60">
+                {formatRefNo(property.refNo)}
+              </td>
               <td className="px-4 py-3 font-medium text-navy">{property.title}</td>
               <td className="px-4 py-3 text-navy/70">{property.type.replace(/_/g, " ")}</td>
               <td className="px-4 py-3 text-navy/70">{property.listingType.replace("_", " ")}</td>
               <td className="px-4 py-3 text-navy/70">{property.status}</td>
               <td className="px-4 py-3 text-navy/70">
-                ₱{property.price.toLocaleString()}
-                {property.listingType === "FOR_RENT" && property.rentPeriod
+                {formatPrice(property)}
+                {!isPriceOnRequest(property) &&
+                property.listingType === "FOR_RENT" &&
+                property.rentPeriod
                   ? ` / ${property.rentPeriod}`
                   : ""}
+                {isPriceReduced(property) && (
+                  <span className="ml-1.5 text-xs font-medium text-emerald-600">
+                    ↓ was ₱{property.originalPrice!.toLocaleString()}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3 text-navy/70">{property.featured ? "Yes" : "—"}</td>
               <td className="px-4 py-3">
