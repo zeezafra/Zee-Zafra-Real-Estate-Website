@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "API for Zee Zafra Properties",
   "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "build": "prisma generate && prisma migrate deploy",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
@@ -26,10 +30,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.4.0",
     "pdfkit": "^0.20.2",
+    "prisma": "^5.20.0",
     "resend": "^6.28.1",
     "streamifier": "^0.1.1"
-  },
-  "devDependencies": {
-    "prisma": "^5.20.0"
   }
 }
