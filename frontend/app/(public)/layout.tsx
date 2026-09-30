@@ -2,6 +2,8 @@ import SiteChrome from "@/components/site/SiteChrome";
 import { InquiryModalProvider } from "@/components/site/InquiryModalProvider";
 import { ViewingModalProvider } from "@/components/site/ViewingModalProvider";
 import FloatingChatButton from "@/components/site/FloatingChatButton";
+import CompareBar from "@/components/site/CompareBar";
+import { LanguageProvider } from "@/components/i18n/LanguageProvider";
 
 // Scoped to the (public) route group so the branding shell (sidebar, mobile
 // header/drawer) wraps the marketing site only — /admin has its own layout
@@ -26,12 +28,17 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Trust & polish: LanguageProvider is outermost so the sidebar, both
+  // modals, and every page's <T> labels share one language choice.
   return (
-    <InquiryModalProvider>
-      <ViewingModalProvider>
-        <SiteChrome>{children}</SiteChrome>
-        <FloatingChatButton />
-      </ViewingModalProvider>
-    </InquiryModalProvider>
+    <LanguageProvider>
+      <InquiryModalProvider>
+        <ViewingModalProvider>
+          <SiteChrome>{children}</SiteChrome>
+          <FloatingChatButton />
+          <CompareBar />
+        </ViewingModalProvider>
+      </InquiryModalProvider>
+    </LanguageProvider>
   );
 }

@@ -1,6 +1,8 @@
 const express = require("express");
 const prisma = require("../lib/prisma");
 const favoriteRateLimit = require("../middleware/favoriteRateLimit");
+const flyerRateLimit = require("../middleware/flyerRateLimit");
+const { buildFlyerPdf, flyerFileName } = require("../lib/flyer");
 
 const router = express.Router();
 
@@ -52,13 +54,30 @@ router.get("/", async (req, res) => {
       status,
       sort,
       q,
+      ids,
     } = req.query;
 
     const where = {};
 
+    // Phase 26: ?ids=a,b,c — used by /compare so it can fetch specific
+    // listings without hitting GET /:id (which bumps viewCount on every
+    // call and would inflate the analytics). Capped at 3, same as the UI.
+    if (typeof ids === "string" && ids.trim()) {
+      where.id = {
+        in: ids
+          .split(",")
+          .map((v) => v.trim())
+          .filter((v) => /^[A-Za-z0-9_-]{5,40}$/.test(v))
+          .slice(0, 3),
+      };
+    }
+
     if (type) where.type = type;
     if (listingType) where.listingType = listingType;
-    if (status) where.status = status;
+    // Phase 27: DRAFT is never a publicly-selectable status, no matter what
+    // the caller passes — this is enforced here, not just by the frontend
+    // defaulting to AVAILABLE, since this route has no auth on it at all.
+    where.status = status && status !== "DRAFT" ? status : { not: "DRAFT" };
     if (featured !== undefined) where.featured = featured === "true";
 
     if (location) {
@@ -98,6 +117,29 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/properties/:id/flyer.pdf
+// Phase 26. One-page shareable PDF (photos, price, ref no, key facts) for
+// sending over Messenger/Viber. Rate limited: it fetches images and
+// renders a PDF per call. Declared before GET /:id — different path depth,
+// but kept adjacent to the other specific routes for readability.
+router.get("/:id/flyer.pdf", flyerRateLimit, async (req, res) => {
+  try {
+    const property = await prisma.property.findUnique({ where: { id: req.params.id } });
+    if (!property) {
+      return res.status(404).json({ error: "Property not found" });
+    }
+
+    const pdf = await buildFlyerPdf(property);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${flyerFileName(property)}"`);
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.send(pdf);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate flyer" });
+  }
+});
+
 // GET /api/properties/areas
 // Phase 15: distinct AVAILABLE locations with a listing count each, for the
 // homepage's "Popular Areas" section and the /areas / /areas/[slug]
@@ -130,6 +172,32 @@ router.get("/areas", async (req, res) => {
   }
 });
 
+// GET /api/properties/sold?limit=
+// Trust & polish. The "Recently Sold / Rented" track record: every SOLD
+// listing (a SOLD FOR_RENT listing is a rented one), most recently closed
+// first. Declared before GET /:id so "sold" isn't read as a property id.
+// Rows without a soldAt (shouldn't exist after the migration's backfill,
+// but an admin can clear it) sort last rather than disappearing.
+router.get("/sold", async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 60, 1), 100);
+    const properties = await prisma.property.findMany({
+      where: { status: "SOLD" },
+      orderBy: [{ soldAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }],
+      take: limit,
+      select: {
+        id: true, refNo: true, title: true, type: true, listingType: true, status: true,
+        price: true, rentPeriod: true, location: true, beds: true, baths: true,
+        carSpaces: true, sqm: true, images: true, soldAt: true, updatedAt: true,
+      },
+    });
+    res.json(properties);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch sold properties" });
+  }
+});
+
 // GET /api/properties/:id
 //
 // Phase 23 (UI/UX Phase 7). Increments `viewCount` on every fetch of this
@@ -142,6 +210,14 @@ router.get("/areas", async (req, res) => {
 // so that's what a missing id turns into a 404 here.
 router.get("/:id", async (req, res) => {
   try {
+    // Phase 27: a DRAFT listing 404s here exactly like a nonexistent id —
+    // checked with a read first (rather than a conditional update) so a
+    // draft's viewCount is never bumped by a stray/guessed hit either.
+    const existing = await prisma.property.findUnique({ where: { id: req.params.id } });
+    if (!existing || existing.status === "DRAFT") {
+      return res.status(404).json({ error: "Property not found" });
+    }
+
     const property = await prisma.property.update({
       where: { id: req.params.id },
       data: { viewCount: { increment: 1 } },

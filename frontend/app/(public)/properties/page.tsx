@@ -3,6 +3,7 @@ import { getProperties, type PropertyFilters } from "@/lib/api";
 import { parsePriceRange } from "@/lib/types";
 import PropertyCard from "@/components/site/PropertyCard";
 import PropertyFilterForm from "@/components/site/PropertyFilterForm";
+import AlertSignup from "@/components/site/AlertSignup";
 
 export const metadata: Metadata = {
   title: "Properties",
@@ -101,6 +102,18 @@ export default async function PropertiesPage({
           No properties match those filters — try widening your search.
         </p>
       )}
+
+      {/* Phase 26: saves whatever filters are currently applied. */}
+      <AlertSignup
+        criteria={{
+          location: filters.location,
+          type: filters.type,
+          listingType: filters.listingType,
+          minPrice: filters.minPrice,
+          maxPrice: filters.maxPrice,
+          minBeds: filters.minBeds,
+        }}
+      />
     </main>
   );
 }

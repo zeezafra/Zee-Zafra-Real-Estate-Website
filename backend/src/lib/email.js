@@ -40,10 +40,10 @@ function isEmailEnabled() {
 }
 
 /**
- * @param {{ to: string | string[], subject: string, html: string, text: string, replyTo?: string }} message
+ * @param {{ to: string | string[], subject: string, html: string, text: string, replyTo?: string, headers?: Record<string,string> }} message
  * @returns {Promise<{ok: boolean, skipped?: boolean, id?: string, error?: string}>}
  */
-async function sendEmail({ to, subject, html, text, replyTo }) {
+async function sendEmail({ to, subject, html, text, replyTo, headers }) {
   if (!client) {
     return { ok: true, skipped: true };
   }
@@ -58,6 +58,8 @@ async function sendEmail({ to, subject, html, text, replyTo }) {
       // Only present when the caller supplies one; an undefined key is
       // dropped by the SDK, so no conditional spread is needed.
       replyTo,
+      // Phase 26: List-Unsubscribe on alert emails.
+      headers,
     });
 
     if (error) {

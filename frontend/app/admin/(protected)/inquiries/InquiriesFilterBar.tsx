@@ -25,6 +25,39 @@ export default function InquiriesFilterBar() {
     router.push(`/admin/inquiries?${params.toString()}`);
   }
 
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // Phase 26. Fetched with the admin cookie and saved as a blob rather than
+  // linked to directly, so it works regardless of the browser's cross-site
+  // cookie handling for plain navigations. Exports exactly what the current
+  // filters + Active/Archived/Spam view are showing.
+  async function exportCsv() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/inquiries/export.csv?${searchParams.toString()}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `inquiries-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("Couldn't export — try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <form
       onSubmit={(e) => {
@@ -76,6 +109,16 @@ export default function InquiriesFilterBar() {
       >
         Search
       </button>
+
+      <button
+        type="button"
+        onClick={exportCsv}
+        disabled={exporting}
+        className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-gold hover:text-gold disabled:opacity-60 dark:border-offwhite/20 dark:text-offwhite"
+      >
+        {exporting ? "Exporting…" : "Export CSV"}
+      </button>
+      {exportError && <span className="text-sm text-red-600">{exportError}</span>}
 
       {(searchParams.get("q") ||
         searchParams.get("status") ||

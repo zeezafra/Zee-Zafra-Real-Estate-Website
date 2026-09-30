@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Home } from "lucide-react";
 import NavSearch from "./NavSearch";
 import SavedListingsLink from "./SavedListingsLink";
+import T from "@/components/i18n/T";
 
 // UI/UX Phase 1: this used to also map NAV_LINKS across the left side,
 // duplicating the sidebar's Home/Properties/Market Insights/About Me/
@@ -39,7 +40,7 @@ export default function TopNav() {
         className="flex items-center gap-2 rounded-full border border-offwhite/50 px-5 py-2 text-sm font-semibold text-offwhite transition hover:border-gold hover:text-gold"
       >
         <Home size={15} className="shrink-0" />
-        Sell Your Property
+        <T id="nav.sell">Sell Your Property</T>
       </Link>
     </nav>
   );

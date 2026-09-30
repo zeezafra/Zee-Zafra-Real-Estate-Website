@@ -129,3 +129,17 @@ export function formatMonthLabel(month: string): string {
 export function formatPercent(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`;
 }
+
+// Trust & polish. "March 2026" for a sold/rented card. Falls back to null
+// (card just omits the date) rather than inventing one when soldAt is unset.
+export function formatSoldMonth(soldAt: string | null): string | null {
+  if (!soldAt) return null;
+  const date = new Date(soldAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "Asia/Manila" });
+}
+
+// A SOLD listing whose listingType is FOR_RENT was rented, not sold.
+export function isRentedDeal(property: { listingType: string }): boolean {
+  return property.listingType === "FOR_RENT";
+}

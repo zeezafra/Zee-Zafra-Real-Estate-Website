@@ -9,7 +9,7 @@ export type PropertyType =
 
 export type ListingType = "FOR_SALE" | "FOR_RENT";
 
-export type PropertyStatus = "AVAILABLE" | "SOLD" | "RESERVED";
+export type PropertyStatus = "AVAILABLE" | "SOLD" | "RESERVED" | "DRAFT";
 
 export type Property = {
   id: string;
@@ -42,9 +42,41 @@ export type Property = {
   // by the heart button (see useSavedListings.toggleSaved) — same shape as
   // viewCount, since favorites themselves are localStorage-only.
   favoriteCount: number;
+  // Phase 25: optional map pin (both set or both null) and optional
+  // video/virtual-tour link — see lib/video.ts for how the URL is embedded.
+  latitude: number | null;
+  longitude: number | null;
+  videoUrl: string | null;
+  // Phase 27: scheduled auto-publish time, meaningful only while status is DRAFT.
+  publishAt: string | null;
+  // Trust & polish: ISO date the deal closed (SOLD listings only). Set
+  // automatically when status becomes SOLD, or by hand in the admin form.
+  soldAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
+
+// Trust & polish: the trimmed shape GET /api/properties/sold returns for the
+// Recently Sold / Rented track record (no description, no view counters).
+export type SoldProperty = Pick<
+  Property,
+  | "id"
+  | "refNo"
+  | "title"
+  | "type"
+  | "listingType"
+  | "status"
+  | "price"
+  | "rentPeriod"
+  | "location"
+  | "beds"
+  | "baths"
+  | "carSpaces"
+  | "sqm"
+  | "images"
+  | "soldAt"
+  | "updatedAt"
+>;
 
 export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: "HOUSE_AND_LOT", label: "House & Lot" },
@@ -63,6 +95,8 @@ export const PROPERTY_STATUSES: { value: PropertyStatus; label: string }[] = [
   { value: "AVAILABLE", label: "Available" },
   { value: "SOLD", label: "Sold" },
   { value: "RESERVED", label: "Reserved" },
+  // Phase 27. Admin-only — never returned by the public API.
+  { value: "DRAFT", label: "Draft" },
 ];
 
 // UI/UX Phase 3. Bedroom/bathroom filters are minimums ("3+"), not exact
@@ -316,6 +350,34 @@ export type Post = {
   content: string;
   coverImage: string | null;
   published: boolean;
+  // Phase 27: scheduled auto-publish time, meaningful only while published is false.
+  publishAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+// Phase 26: row shape for GET /api/admin/alerts (the subscriber's token is
+// deliberately never sent to the admin UI).
+// Trust & polish: a row in /admin/guide-leads.
+export type GuideLeadRow = {
+  id: string;
+  email: string;
+  name: string | null;
+  guide: string;
+  createdAt: string;
+};
+
+export type SavedSearchRow = {
+  id: string;
+  email: string;
+  name: string | null;
+  location: string | null;
+  type: PropertyType | null;
+  listingType: ListingType | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  minBeds: number | null;
+  confirmedAt: string | null;
+  lastNotifiedAt: string | null;
+  createdAt: string;
 };

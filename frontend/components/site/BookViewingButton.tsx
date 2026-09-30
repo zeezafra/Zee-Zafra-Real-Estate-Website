@@ -2,6 +2,7 @@
 
 import { Calendar } from "lucide-react";
 import { useViewingModal } from "./ViewingModalProvider";
+import T from "@/components/i18n/T";
 
 type Props = {
   propertyId?: string;
@@ -20,7 +21,7 @@ type Props = {
 export default function BookViewingButton({
   propertyId,
   propertyTitle,
-  label = "Book a Viewing",
+  label,
   className,
 }: Props) {
   const { open } = useViewingModal();
@@ -32,7 +33,7 @@ export default function BookViewingButton({
       className={className}
     >
       <Calendar size={16} className="shrink-0" />
-      {label}
+      {label ?? <T id="cta.bookViewing">Book a Viewing</T>}
     </button>
   );
 }

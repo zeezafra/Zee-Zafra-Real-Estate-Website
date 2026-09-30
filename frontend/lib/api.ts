@@ -1,4 +1,4 @@
-import type { Area, Post, Property } from "./types";
+import type { Area, Post, Property, SoldProperty } from "./types";
 
 // Server-only fetch helpers for the public properties API. No cookies
 // involved (unlike lib/adminAuth.ts), so these are safe to call from plain
@@ -86,6 +86,27 @@ export async function getProperties(filters: PropertyFilters = {}): Promise<Prop
   }
 }
 
+// GET /api/properties?ids=a,b,c — /compare (Phase 26). Uses the list endpoint,
+// not GET /:id, so comparing doesn't bump each listing's viewCount. Result is
+// returned in the order the ids were requested, and silently omits any that
+// no longer exist.
+export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
+  if (!apiUrl || ids.length === 0) {
+    return [];
+  }
+
+  try {
+    const res = await fetch(`${apiUrl}/api/properties?ids=${encodeURIComponent(ids.join(","))}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const rows = (await res.json()) as Property[];
+    return ids.map((id) => rows.find((p) => p.id === id)).filter((p): p is Property => Boolean(p));
+  } catch {
+    return [];
+  }
+}
+
 // GET /api/properties/areas — homepage "Popular Areas" section and the
 // /areas / /areas/[slug] neighborhood pages (Phase 15). Same 60s revalidate
 // window as the other list helpers, so a newly-added listing's location
@@ -105,6 +126,31 @@ export async function getAreas(): Promise<Area[]> {
     }
 
     return (await res.json()) as Area[];
+  } catch {
+    return [];
+  }
+}
+
+// GET /api/properties/sold — the Recently Sold / Rented track record
+// (homepage strip + /sold). Most recently closed first. Same 60s revalidate
+// window as the other list helpers, so marking a listing sold in the admin
+// shows up without a redeploy. Returns [] if the API is down so the page
+// (and the homepage) still render, just without the section.
+export async function getSoldProperties(limit = 60): Promise<SoldProperty[]> {
+  if (!apiUrl) {
+    return [];
+  }
+
+  try {
+    const res = await fetch(`${apiUrl}/api/properties/sold?limit=${limit}`, {
+      next: { revalidate: 60 },
+    });
+
+    if (!res.ok) {
+      return [];
+    }
+
+    return (await res.json()) as SoldProperty[];
   } catch {
     return [];
   }

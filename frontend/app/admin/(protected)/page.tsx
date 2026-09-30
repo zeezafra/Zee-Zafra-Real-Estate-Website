@@ -1,29 +1,16 @@
 import Link from "next/link";
-import { getAdminSession } from "@/lib/adminAuth";
-import type { Property } from "@/lib/types";
+import { getAdminSession, getAdminProperties } from "@/lib/adminAuth";
 import LogoutButton from "./LogoutButton";
 import PropertiesTable from "./PropertiesTable";
 
-async function getAllProperties(): Promise<Property[]> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) return [];
-
-  try {
-    // No filters applied — deliberately shows non-featured and sold
-    // listings too, unlike the public /properties grid (Phase 7).
-    const res = await fetch(`${apiUrl}/api/properties`, { cache: "no-store" });
-    if (!res.ok) return [];
-    return (await res.json()) as Property[];
-  } catch {
-    return [];
-  }
-}
-
 // Replaces the Phase 3 placeholder now that there's real CRUD to show.
+// Phase 27: reads from the authenticated GET /api/admin/properties (not
+// the public route) so DRAFT listings show up here too — the public
+// route now hard-excludes them.
 export default async function AdminDashboardPage() {
   const [session, properties] = await Promise.all([
     getAdminSession(),
-    getAllProperties(),
+    getAdminProperties(),
   ]);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -52,10 +39,29 @@ export default async function AdminDashboardPage() {
           </Link>
           {/* Phase 20 */}
           <Link
+            href="/admin/subscribers"
+            className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-gold hover:text-gold"
+          >
+            Alert Subscribers
+          </Link>
+          {/* Trust & polish */}
+          <Link
+            href="/admin/guide-leads"
+            className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-gold hover:text-gold"
+          >
+            Guide Downloads
+          </Link>
+          <Link
             href="/admin/analytics"
             className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-navy/40"
           >
             Analytics
+          </Link>
+          <Link
+            href="/admin/calendar"
+            className="rounded-full border border-navy/20 px-4 py-2 text-sm font-medium text-navy transition hover:border-navy/40"
+          >
+            Viewing Calendar
           </Link>
           <Link
             href="/admin/properties/new"

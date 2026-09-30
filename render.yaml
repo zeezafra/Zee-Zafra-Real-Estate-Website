@@ -1,0 +1,45 @@
+# Render Blueprint — deploys the Express API in /backend.
+# Render Dashboard > New > Blueprint > pick this repo. Values marked
+# `sync: false` are asked for in the dashboard (secrets never live in git).
+services:
+  - type: web
+    name: zee-zafra-properties-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run build   # prisma generate + prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NODE_ENV          # required: enables Secure/SameSite=None admin cookie
+        value: production
+      - key: DATABASE_URL      # Neon: use the DIRECT (non-pooled) connection string
+        sync: false
+      - key: FRONTEND_ORIGIN   # your Vercel URL, no trailing slash
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: INQUIRY_NOTIFY_TO
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      # Only used by `node prisma/seedAdmin.js` (see the guide) — not by the running server.
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false

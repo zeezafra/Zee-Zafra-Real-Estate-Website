@@ -6,6 +6,18 @@ import { useState } from "react";
 import type { Post } from "@/lib/types";
 import { formatPostDate } from "@/lib/format";
 
+// Phase 27.
+function formatScheduled(publishAt: string): string | null {
+  const d = new Date(publishAt);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function PostsTable({
   posts,
   apiUrl,
@@ -82,6 +94,12 @@ export default function PostsTable({
                 >
                   {post.published ? "Published" : "Draft"}
                 </span>
+                {/* Phase 27 */}
+                {!post.published && post.publishAt && (
+                  <p className="mt-0.5 text-[11px] text-navy/50">
+                    Publishes {formatScheduled(post.publishAt)}
+                  </p>
+                )}
               </td>
               <td className="px-4 py-3 text-navy/70">{formatPostDate(post.createdAt)}</td>
               <td className="px-4 py-3">

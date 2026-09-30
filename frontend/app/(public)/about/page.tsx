@@ -4,6 +4,8 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { ABOUT_CONTENT, AGENT } from "@/lib/siteConfig";
 import CTABanner from "@/components/site/CTABanner";
+import JsonLd from "@/components/site/JsonLd";
+import { agentJsonLd } from "@/lib/structuredData";
 
 export const metadata: Metadata = {
   title: "About Me",
@@ -11,8 +13,10 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  const credentials = ABOUT_CONTENT.credentials.filter((c) => !c.trim().startsWith("[Add"));
   return (
     <main>
+      <JsonLd data={agentJsonLd()} />
       <div className="mx-auto max-w-6xl px-6 py-16 lg:px-10">
         <p className="text-sm font-semibold uppercase tracking-wide text-gold">
           About Me
@@ -47,12 +51,16 @@ export default function AboutPage() {
               ))}
             </div>
 
+            {/* Trust & polish: entries still holding an "[Add …]" placeholder
+                are hidden, and so is the whole block when none are filled
+                in — a visitor should never see bracketed to-do text. */}
+            {credentials.length > 0 && (
             <div className="mt-10">
               <h2 className="text-lg font-semibold text-navy dark:text-offwhite">
                 Credentials
               </h2>
               <ul className="mt-4 space-y-3">
-                {ABOUT_CONTENT.credentials.map((credential) => (
+                {credentials.map((credential) => (
                   <li
                     key={credential}
                     className="flex items-start gap-3 text-navy/70 dark:text-offwhite/70"
@@ -66,6 +74,7 @@ export default function AboutPage() {
                 ))}
               </ul>
             </div>
+            )}
 
             <div className="mt-10 flex flex-wrap gap-4">
               <Link

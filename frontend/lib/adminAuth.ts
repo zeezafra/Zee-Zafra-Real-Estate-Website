@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import type {
+  GuideLeadRow,
   InquiryAnalytics,
   InquiryNote,
   InquirySource,
@@ -7,6 +8,8 @@ import type {
   InquiryStatus,
   InquiryType,
   Post,
+  Property,
+  SavedSearchRow,
 } from "./types";
 
 // Must match ADMIN_COOKIE_NAME in backend/src/lib/cookieOptions.js.
@@ -259,3 +262,114 @@ export async function getAdminPosts(): Promise<Post[]> {
     return [];
   }
 }
+
+// Phase 26. Backs /admin/subscribers. null on failure so the page can say
+// "couldn't load" instead of showing an empty list that looks like zero
+// subscribers.
+export async function getAdminAlerts(): Promise<SavedSearchRow[] | null> {
+  const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!token || !apiUrl) return null;
+
+  try {
+    const res = await fetch(`${apiUrl}/api/admin/alerts`, {
+      headers: { cookie: `${ADMIN_COOKIE_NAME}=${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as SavedSearchRow[];
+  } catch {
+    return null;
+  }
+}
+
+// Trust & polish. Backs /admin/guide-leads. null on failure so the page can
+// say "couldn't load" instead of an empty list that reads as zero leads.
+export async function getAdminGuideLeads(): Promise<GuideLeadRow[] | null> {
+  const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!token || !apiUrl) return null;
+
+  try {
+    const res = await fetch(`${apiUrl}/api/admin/guide-leads`, {
+      headers: { cookie: `${ADMIN_COOKIE_NAME}=${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as GuideLeadRow[];
+  } catch {
+    return null;
+  }
+}
+
+// Phase 27. Admin-scoped counterpart to lib/api.ts's getProperties() —
+// returns every status including DRAFT, which the public route now hard-
+// excludes. Backs the admin dashboard table and the edit page.
+export async function getAdminProperties(): Promise<Property[]> {
+  const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!token || !apiUrl) return [];
+
+  try {
+    const res = await fetch(`${apiUrl}/api/admin/properties`, {
+      headers: { cookie: `${ADMIN_COOKIE_NAME}=${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as Property[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getAdminProperty(id: string): Promise<Property | null> {
+  const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!token || !apiUrl) return null;
+
+  try {
+    const res = await fetch(`${apiUrl}/api/admin/properties/${id}`, {
+      headers: { cookie: `${ADMIN_COOKIE_NAME}=${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as Property;
+  } catch {
+    return null;
+  }
+}
+
+// Phase 27. Backs /admin/calendar — every inquiry carrying a viewing
+// preference, for the admin to see at a glance rather than scanning the
+// inbox. null on failure so the page can say so instead of showing an
+// empty calendar that looks like there's nothing booked.
+export async function getAdminViewings(): Promise<ViewingInquiry[] | null> {
+  const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!token || !apiUrl) return null;
+
+  try {
+    const res = await fetch(`${apiUrl}/api/admin/inquiries/viewings`, {
+      headers: { cookie: `${ADMIN_COOKIE_NAME}=${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as ViewingInquiry[];
+  } catch {
+    return null;
+  }
+}
+
+// Shape returned by GET /api/admin/inquiries/viewings.
+export type ViewingInquiry = {
+  id: string;
+  type: InquiryType;
+  status: InquiryStatus;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  message: string;
+  preferredDate: string;
+  preferredTime: string | null;
+  property: { id: string; title: string; location: string; refNo: number; status: string } | null;
+};

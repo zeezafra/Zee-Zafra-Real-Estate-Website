@@ -190,26 +190,61 @@ export const SERVICES = [
   },
 ];
 
-// Draft shape only — see the file-level note above. Replace name, location,
-// and quote with real client testimonials before this page goes live.
-export const TESTIMONIALS = [
-  {
-    name: "[Client name]",
-    location: "[Client location, e.g. Talisay City]",
-    quote:
-      "[Add a real client quote about working with Zee — what they were looking for and how the process went.]",
-  },
-  {
-    name: "[Client name]",
-    location: "[Client location]",
-    quote: "[Add another real client quote.]",
-  },
-  {
-    name: "[Client name]",
-    location: "[Client location]",
-    quote: "[Add another real client quote.]",
-  },
+// Trust & polish. Real client testimonials only — an empty array is the
+// honest state until Zee has them, and the /testimonials page shows a
+// composed empty state (with the review buttons below) rather than
+// placeholder text. To add one, copy the template and fill in every field
+// with what the client actually said and agreed to have published:
+//
+//   {
+//     name: "Maria S.",                      // first name + initial is fine
+//     location: "Talisay City",
+//     quote: "…their own words, unedited except for typos…",
+//     photo: "/images/testimonials/maria.jpg", // optional; file goes in frontend/public/images/testimonials/
+//     source: "Facebook",                    // optional: "Google" | "Facebook" — where it was originally posted
+//     sourceUrl: "https://www.facebook.com/…", // optional: link to the original review
+//   },
+//
+// Get the client's OK before using their name or photo. Leave `photo` out
+// and an initials avatar is drawn instead.
+export type Testimonial = {
+  name: string;
+  location: string;
+  quote: string;
+  photo?: string;
+  source?: "Google" | "Facebook";
+  sourceUrl?: string;
+};
+
+//Where to get Testimonials
+export const TESTIMONIALS: Testimonial[] = [
+    { name: "Test Client", location: "Talisay City", quote: "Test quote for checking the layout." },
 ];
+
+// Trust & polish. Public review destinations. Empty string = "not set up
+// yet" and the matching button simply doesn't render (no dead "#" links).
+//  - google:   the "write a review" link from Google Business Profile
+//              (Get more reviews > Share review form), looks like
+//              https://g.page/r/XXXXXXXX/review
+//  - facebook: a Facebook *Page's* reviews tab, e.g.
+//              https://www.facebook.com/<page-username>/reviews
+//              (personal profiles can't collect reviews)
+export const REVIEW_LINKS = {
+  google: "",
+  facebook: "https://www.facebook.com/profile.php?id=61594137604570",
+};
+
+// Trust & polish. The hero's "Watch Introduction" video. Paste a YouTube,
+// Vimeo, or Facebook video/reel URL. Empty = no button is shown at all.
+// (YouTube/Vimeo/Facebook play inside a pop-up; any other https link opens
+// in a new tab.)
+export const INTRO_VIDEO_URL = "https://www.youtube.com/watch?v=DJJos7u5qlk&list=RDMMnxMokRj0bl8&index=8";
+
+// Trust & polish. Whether the Recently Sold / Rented cards show the closing
+// price. Off by default: a sold price is the client's business, and the
+// track record works without it. Flip to true if Zee and his clients are
+// happy to publish figures.
+export const SHOW_SOLD_PRICES = false;
 
 export const CONTACT_INFO = {
   // Two numbers, display-only here — the /contact page's tel: link uses

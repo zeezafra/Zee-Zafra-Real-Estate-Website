@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { InquiryContext } from "./InquiryModalProvider";
 import { useFocusTrap } from "@/lib/useFocusTrap";
-import { TURNSTILE_SITE_KEY } from "@/lib/siteConfig";
+import { TURNSTILE_SITE_KEY, CHAT_LINKS, SOCIAL_LINKS } from "@/lib/siteConfig";
 import HoneypotField from "./HoneypotField";
+import T from "@/components/i18n/T";
 import TurnstileWidget from "./TurnstileWidget";
 
 type Props = {
@@ -182,19 +183,52 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
         {success ? (
           <div className="py-6 text-center">
             <h2 className="text-xl font-bold text-navy dark:text-offwhite">
-              {duplicate ? "Already got this one" : "Thanks \u2014 message sent!"}
+              {duplicate ? (
+                <T id="inq.dupTitle">Already got this one</T>
+              ) : (
+                <T id="inq.thanks">{"Thanks \u2014 message sent!"}</T>
+              )}
             </h2>
             <p className="mt-2 text-sm text-navy/60 dark:text-offwhite/60">
-              {duplicate
-                ? "Your earlier message is already in my inbox \u2014 anything new you added has been attached to it. I\u2019ll get back to you as soon as I can."
-                : "I\u2019ll get back to you as soon as I can."}
+              {duplicate ? (
+                <T id="inq.dupReply">
+                  {"Your earlier message is already in my inbox \u2014 anything new you added has been attached to it. I\u2019ll get back to you as soon as I can."}
+                </T>
+              ) : (
+                <T id="inq.reply">{"I\u2019ll get back to you as soon as I can."}</T>
+              )}
             </p>
+            <p className="mt-5 text-sm font-medium text-navy dark:text-offwhite">
+              <T id="inq.chat">Prefer to chat? Message me directly:</T>
+            </p>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {[
+                { label: "Messenger", href: CHAT_LINKS.messenger },
+                {
+                  label: "Instagram",
+                  href: SOCIAL_LINKS.find((l) => l.icon === "instagram")?.href ?? "",
+                },
+                { label: "WhatsApp", href: CHAT_LINKS.whatsapp },
+              ]
+                .filter((c) => c.href && c.href !== "#")
+                .map((c) => (
+                  <a
+                    key={c.label}
+                    href={c.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full border border-navy/15 px-4 py-1.5 text-sm font-medium text-navy transition hover:border-gold hover:text-gold dark:border-offwhite/15 dark:text-offwhite"
+                  >
+                    {c.label}
+                  </a>
+                ))}
+            </div>
             <button
               type="button"
               onClick={onClose}
               className="mt-6 rounded-full bg-gold px-6 py-2.5 text-sm font-semibold text-navy transition hover:bg-gold-light"
             >
-              Close
+              <T id="inq.close">Close</T>
             </button>
           </div>
         ) : (
@@ -203,11 +237,11 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
               id="inquiry-modal-title"
               className="pr-8 text-xl font-bold text-navy dark:text-offwhite"
             >
-              Send an Inquiry
+              <T id="inq.title">Send an Inquiry</T>
             </h2>
             {context?.propertyTitle && (
               <p className="mt-1 text-sm text-navy/60 dark:text-offwhite/60">
-                Regarding: <span className="font-medium">{context.propertyTitle}</span>
+                <T id="inq.regarding">Regarding:</T> <span className="font-medium">{context.propertyTitle}</span>
               </p>
             )}
 
@@ -215,7 +249,7 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
               <HoneypotField value={honeypot} onChange={setHoneypot} />
 
               <label className="block text-sm font-medium text-navy dark:text-offwhite">
-                Name
+                <T id="inq.name">Name</T>
                 <input
                   ref={firstFieldRef}
                   type="text"
@@ -229,7 +263,7 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-navy dark:text-offwhite">
-                  Email
+                  <T id="inq.email">Email</T>
                   <input
                     type="email"
                     value={email}
@@ -239,7 +273,7 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
                   />
                 </label>
                 <label className="block text-sm font-medium text-navy dark:text-offwhite">
-                  Phone
+                  <T id="inq.phone">Phone</T>
                   <input
                     type="tel"
                     value={phone}
@@ -250,11 +284,11 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
                 </label>
               </div>
               <p className="-mt-2 text-xs text-navy/50 dark:text-offwhite/50">
-                Add at least one of email or phone.
+                <T id="inq.hint">Add at least one of email or phone.</T>
               </p>
 
               <label className="block text-sm font-medium text-navy dark:text-offwhite">
-                Message
+                <T id="inq.message">Message</T>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -277,7 +311,7 @@ export default function InquiryModal({ isOpen, onClose, context }: Props) {
                 disabled={submitting}
                 className="flex w-full items-center justify-center rounded-full bg-gold px-6 py-3 font-semibold text-navy transition hover:bg-gold-light disabled:opacity-60"
               >
-                {submitting ? "Sending…" : "Send Inquiry"}
+                {submitting ? <T id="inq.sending">Sending…</T> : <T id="inq.send">Send Inquiry</T>}
               </button>
             </form>
           </>

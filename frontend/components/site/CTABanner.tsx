@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import InquireButton from "./InquireButton";
+import T from "@/components/i18n/T";
 
 // The reference screenshot's homepage closes on a full-bleed photo band
 // with a short prompt and a "Get in Touch" button — the roadmap's Visual
@@ -35,18 +36,18 @@ export default function CTABanner() {
       <div className="relative mx-auto flex max-w-6xl flex-col items-start gap-6 px-6 py-16 sm:flex-row sm:items-center sm:justify-between lg:px-10">
         <div>
           <h2 className="text-2xl font-bold text-offwhite sm:text-3xl">
-            Let&rsquo;s Find Your Perfect Property
+            <T id="cta.heading">{"Let\u2019s Find Your Perfect Property"}</T>
           </h2>
           <p className="mt-2 max-w-xl text-offwhite/80">
-            Whether you&rsquo;re looking for a new home, an investment, or
-            your next business space, I&rsquo;m here to help you every step
-            of the way.
+            <T id="cta.body">
+              {"Whether you\u2019re looking for a new home, an investment, or your next business space, I\u2019m here to help you every step of the way."}
+            </T>
           </p>
           <Link
             href="/sell"
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-offwhite/80 underline decoration-offwhite/40 underline-offset-4 transition hover:text-gold hover:decoration-gold"
           >
-            Thinking of selling instead? Get a free valuation
+            <T id="cta.sell">Thinking of selling instead? Get a free valuation</T>
             <ArrowRight size={13} />
           </Link>
         </div>
@@ -55,7 +56,7 @@ export default function CTABanner() {
           source="CTA_BANNER"
           className="flex shrink-0 items-center gap-2 rounded-full bg-gold px-6 py-3 font-semibold text-navy transition hover:bg-gold-light"
         >
-          Get in Touch
+          <T id="cta.getInTouch">Get in Touch</T>
           <ArrowRight size={16} />
         </InquireButton>
       </div>

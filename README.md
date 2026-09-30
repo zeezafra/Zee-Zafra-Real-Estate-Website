@@ -786,3 +786,149 @@ Resend account was created with. That's fine for notifying Zee, provided
       before treating the policy as launch-ready.
 - [ ] **Check the Render Node version is 20+** (the SDK's requirement).
       Render's default is newer, but `render.yaml` doesn't pin it.
+
+## Phase 25 — Property Page Upgrades (calculator, map, video, structured data)
+
+- **Monthly payment estimate** (`components/site/MortgageCalculator.tsx`,
+  `lib/mortgage.ts`): down-payment slider, term and interest-rate inputs.
+  Shown only on non-sold, priced `FOR_SALE` listings. It's an estimate and
+  says so; the default 7% rate is a starting point, not a quoted offer.
+- **Map + nearby links** (`components/site/PropertyMap.tsx`): OpenStreetMap
+  embed (no API key) plus "Open in Google Maps" and Nearby Schools /
+  Hospitals / Malls / Restaurants search links centered on the pin. Appears
+  only when a listing has coordinates.
+- **Video tour** (`components/site/VideoTour.tsx`, `lib/video.ts`): YouTube,
+  Vimeo and public Facebook videos/reels embed; other links show as a button.
+- **JSON-LD** (`lib/structuredData.ts`, `components/site/JsonLd.tsx`):
+  `RealEstateListing` + `Offer` + `BreadcrumbList` on each property page,
+  `RealEstateAgent` on About. No phone/licence is emitted until real values
+  exist in `siteConfig.ts`.
+- **Admin form**: two new optional fields — paste "lat, lng" copied from
+  Google Maps, and a video URL.
+
+### Deploy steps (must be run manually — Prisma engines are blocked in the sandbox)
+
+```bash
+cd backend
+npx prisma generate
+npx prisma migrate deploy   # applies 20260928090000_add_property_map_video
+```
+
+Then redeploy the backend on Render before the frontend, so the new fields
+exist when the admin form starts sending them. Existing listings are
+unaffected (all three columns are nullable).
+
+### To verify after deploy
+
+- [ ] Edit a listing, paste coordinates and a YouTube link, save, and confirm
+      the map and player show on `/properties/<id>`.
+- [ ] Run a property URL through Google's Rich Results Test / validator.schema.org.
+- [ ] Try a public Facebook reel URL; if it won't play inline, the fallback link is shown.
+
+## Phase 26 — Lead generation & follow-up
+
+Five additions. Backend deploys first, then frontend.
+
+1. **New-listing email alerts** — "Get email alerts for this search" on
+   `/properties` saves the current filters as a `SavedSearch` (double opt-in:
+   confirm link → `/alerts/confirm`; every email carries an unsubscribe link →
+   `/unsubscribe`, which asks for a click before deleting). Alerts go out once
+   per listing, the first time it is `AVAILABLE` (`Property.alertsSentAt`), so
+   later edits never re-send. Admin overview: `/admin/subscribers`.
+2. **Property comparison** — a compare toggle on every card (max 3), a floating
+   tray, and `/compare?ids=a,b,c` (shareable; best values highlighted). Uses
+   `GET /api/properties?ids=` so comparing doesn't inflate view counts.
+3. **Listing flyer PDF** — `GET /api/properties/:id/flyer.pdf` (pdfkit, A4,
+   photos + ref no + facts + link). "Download Flyer (PDF)" on the property page.
+   Prices print as "PHP …" because built-in PDF fonts lack the ₱ glyph.
+4. **Visitor auto-reply** — a thank-you email to the lead (viewing / seller /
+   buyer wording, reply-to = you). Off switch: `AUTO_REPLY_ENABLED=false`.
+5. **CSV export + daily digest** — "Export CSV" in the inbox exports whatever
+   filters/view are showing (formula-injection safe, Excel-friendly UTF-8).
+   The digest emails overdue/due-today follow-ups, viewings today/tomorrow and
+   untouched 24h+ leads — and sends nothing on an empty day.
+
+### Deploy steps
+
+```bash
+cd backend
+npm install                 # adds pdfkit
+npx prisma generate
+npx prisma migrate deploy   # 20260928120000_add_saved_search_alerts
+```
+
+New env vars on Render (see `backend/.env.example`): `CRON_SECRET` (required for
+the digest), optionally `AUTO_REPLY_RESPONSE_TIME`, `REPLY_TO_EMAIL`, `AGENT_NAME`.
+
+**Digest scheduler:** Render's free plan has no cron. `.github/workflows/daily-digest.yml`
+calls `POST /api/cron/daily-digest` at 8:00 AM Manila. Add repo secrets `API_URL`
+and `CRON_SECRET`. (Or run `node scripts/sendDigest.js` from a Render Cron Job.)
+
+### Important: emails only reach visitors from a verified domain
+
+While `RESEND_FROM_EMAIL` is unset, Resend's sandbox sender can only deliver to
+your own address. The auto-reply, alert confirmation and listing alerts all go
+to *visitors*, so verify a domain in Resend and set `RESEND_FROM_EMAIL` first.
+Until then they fail quietly (logged, never shown to the visitor); your own
+inquiry notification and daily digest still work.
+
+### To verify after deploy
+
+- [ ] Sign up for an alert with your own email, click the confirm link, then add a matching listing in admin — you should get the alert.
+- [ ] Click Unsubscribe in that email and confirm the row disappears from `/admin/subscribers`.
+- [ ] Submit a test inquiry with your email: you get the notification, and (with a verified domain) the auto-reply.
+- [ ] Export CSV with a filter applied and open it in Excel.
+- [ ] Trigger the digest: Actions tab → Daily digest → Run workflow (needs a follow-up dated today or earlier).
+- [ ] Add 2–3 listings to compare, then open the shared `/compare` link in a private window.
+- [ ] Download a flyer for a listing with photos.
+
+## Phase 27 — Admin tooling
+
+Four additions, all admin-only.
+
+1. **Bulk actions + duplicate** — checkboxes on the properties table
+   (`PATCH /api/admin/properties/bulk`: Mark Available/Reserved/Sold, Feature,
+   Unfeature — max 200 ids per call) and a per-row **Duplicate** button
+   (`POST /api/admin/properties/:id/duplicate`) that clones a listing as a
+   new **Draft** (never live, never re-alerts subscribers) so it's a safe
+   starting point to edit.
+2. **Drag-to-reorder photos + cover image** — `ImageManager.tsx` replaces the
+   old two-array (existing/new) photo picker in `PropertyForm`. One ordered
+   list, native HTML5 drag-and-drop, plus keyboard-friendly ◀ ▶ and "Make
+   cover" buttons. The first photo is always the cover shown everywhere on
+   the site.
+3. **Draft & scheduled listings/posts** — `PropertyStatus` gains `DRAFT`
+   (never returned by any public endpoint, enforced server-side — see
+   `routes/properties.js` — not just the frontend's default filter). Both
+   `Property` and `Post` gain an optional `publishAt`: set it while saving as
+   Draft (or unpublished) and `POST /api/cron/publish-scheduled` flips it
+   live automatically once due, and re-runs the listing-alert check for any
+   property that just went live.
+4. **Admin viewing calendar** — `/admin/calendar`, a month grid pulling every
+   inquiry with a `preferredDate` (`GET /api/admin/inquiries/viewings`), so
+   viewings don't require scanning the inbox.
+
+### Deploy steps
+
+```bash
+cd backend
+npx prisma generate
+npx prisma migrate deploy   # 20260929080000_add_draft_scheduling
+```
+
+No new env vars — the publish-scheduled cron reuses `CRON_SECRET` from Phase 26.
+
+**New scheduler:** `.github/workflows/publish-scheduled.yml` calls
+`POST /api/cron/publish-scheduled` every 15 minutes (reuses the `API_URL` /
+`CRON_SECRET` repo secrets already set up for the daily digest — nothing new
+to add there). GitHub's free-tier schedule can run a few minutes late,
+especially on a quiet repo — fine for "around 9 AM," not exact.
+
+### To verify after deploy
+
+- [ ] Create a Draft listing with a publish time 20–30 min out; confirm it flips to Available (and, if it matches a confirmed alert search, that subscriber gets emailed) without you touching it.
+- [ ] Duplicate a listing, confirm the copy is a Draft titled "… (Copy)" with a fresh ref number.
+- [ ] Select a few listings in the table and try each bulk action.
+- [ ] Drag photos around in the edit form, including making a freshly-uploaded photo the cover, and confirm the saved order matches.
+- [ ] Submit a "Book a Viewing" request from the site, then check it shows up on `/admin/calendar` on the right day.
+- [ ] Confirm a Draft listing 404s on its public URL and is absent from `/properties`.

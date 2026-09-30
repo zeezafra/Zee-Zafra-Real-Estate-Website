@@ -58,6 +58,30 @@ function validatePostPayload(body, { partial = false } = {}) {
     data.published = Boolean(body.published);
   }
 
+  // Phase 27. Scheduling: set while published is false to have
+  // routes/cron.js flip published to true automatically once due. Same
+  // validation shape as Property.publishAt in adminProperties.js.
+  if (provided("publishAt")) {
+    if (body.publishAt === null || body.publishAt === "") {
+      data.publishAt = null;
+    } else {
+      const date = new Date(body.publishAt);
+      if (Number.isNaN(date.getTime())) {
+        errors.push("publishAt must be a valid date/time");
+      } else if (date.getTime() < Date.now() - 60000) {
+        errors.push("publishAt must be in the future");
+      } else {
+        data.publishAt = date;
+      }
+    }
+  }
+
+  // Publishing manually clears any leftover schedule, same reasoning as
+  // the equivalent block in adminProperties.js.
+  if (provided("published") && data.published === true && !provided("publishAt")) {
+    data.publishAt = null;
+  }
+
   return { data, errors };
 }
 

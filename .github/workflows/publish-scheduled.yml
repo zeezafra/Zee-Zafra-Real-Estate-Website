@@ -1,0 +1,25 @@
+# Publishes scheduled DRAFT listings and scheduled blog posts once their
+# publishAt time arrives. Render's free plan has no scheduler, so this
+# calls the backend's protected endpoint on a short interval.
+#
+# Setup (same secrets as daily-digest.yml — reused, not duplicated):
+#   API_URL      e.g. https://zee-zafra-properties-api.onrender.com
+#   CRON_SECRET  same value as the CRON_SECRET env var on Render
+#
+# GitHub free-tier schedules are best-effort and can run several minutes
+# late, especially on a quiet repo — fine for "publish around 9 AM", not a
+# guarantee of exact timing.
+name: Publish scheduled listings & posts
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call publish-scheduled endpoint
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 15 --max-time 60 \
+            -X POST "${{ secrets.API_URL }}/api/cron/publish-scheduled" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

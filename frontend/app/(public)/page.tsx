@@ -2,6 +2,8 @@ import Hero from "@/components/site/Hero";
 import HomeSearch from "@/components/site/HomeSearch";
 import CategoryStrip from "@/components/site/CategoryStrip";
 import FeaturedListings from "@/components/site/FeaturedListings";
+import RecentlySold from "@/components/site/RecentlySold";
+import GuidesSection from "@/components/site/GuidesSection";
 import PopularAreas from "@/components/site/PopularAreas";
 import ServicesPreview from "@/components/site/ServicesPreview";
 import LatestArticles from "@/components/site/LatestArticles";
@@ -48,9 +50,11 @@ export default function HomePage() {
       <HomeSearch />
       <CategoryStrip />
       <FeaturedListings />
+      <RecentlySold />
       <PopularAreas />
       <ServicesPreview />
       <LatestArticles />
+      <GuidesSection />
       <CTABanner />
     </main>
   );

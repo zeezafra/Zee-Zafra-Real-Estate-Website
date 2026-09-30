@@ -16,7 +16,22 @@ type FormState = {
   excerpt: string;
   content: string;
   published: boolean;
+  // Phase 27. Datetime-local input value, or "" for no schedule. Only
+  // sent/shown while published is unchecked.
+  publishAt: string;
 };
+
+// ISO string (or null) -> the value a <input type="datetime-local"> wants,
+// in the browser's local time zone. Same helper as PropertyForm.tsx (not
+// shared into lib/ since it's this small and each admin form already owns
+// its own toFormState).
+function toDatetimeLocal(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 function toFormState(post?: Post): FormState {
   return {
@@ -25,6 +40,7 @@ function toFormState(post?: Post): FormState {
     excerpt: post?.excerpt ?? "",
     content: post?.content ?? "",
     published: post?.published ?? true,
+    publishAt: toDatetimeLocal(post?.publishAt ?? null),
   };
 }
 
@@ -117,6 +133,9 @@ export default function PostForm({ apiUrl, post }: Props) {
         content: form.content,
         coverImage,
         published: form.published,
+        // Only meaningful (and only sent) while saved as a draft.
+        publishAt:
+          !form.published && form.publishAt ? new Date(form.publishAt).toISOString() : null,
       };
 
       const url = isEdit
@@ -213,6 +232,22 @@ export default function PostForm({ apiUrl, post }: Props) {
           />
           Published (unchecking saves it as a draft — visible here, not on the site)
         </label>
+
+        {!form.published && (
+          <label className={labelClass}>
+            Auto-publish at (optional)
+            <input
+              type="datetime-local"
+              value={form.publishAt}
+              onChange={(e) => updateField("publishAt", e.target.value)}
+              className={inputClass}
+            />
+            <span className="mt-1 block text-xs font-normal text-navy/50">
+              Leave blank to publish manually later. Set a date/time and it goes live
+              automatically, roughly every 15 minutes.
+            </span>
+          </label>
+        )}
       </div>
 
       <div>

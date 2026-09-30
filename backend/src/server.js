@@ -13,6 +13,11 @@ const adminInquiriesRouter = require("./routes/adminInquiries");
 const adminAnalyticsRouter = require("./routes/adminAnalytics");
 const postsRouter = require("./routes/posts");
 const adminPostsRouter = require("./routes/adminPosts");
+const alertsRouter = require("./routes/alerts");
+const adminAlertsRouter = require("./routes/adminAlerts");
+const cronRouter = require("./routes/cron");
+const guidesRouter = require("./routes/guides");
+const adminGuidesRouter = require("./routes/adminGuides");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -37,6 +42,11 @@ app.use("/api/admin", adminInquiriesRouter);
 app.use("/api/admin", adminAnalyticsRouter);
 app.use("/api/posts", postsRouter);
 app.use("/api/admin", adminPostsRouter);
+app.use("/api/alerts", alertsRouter);
+app.use("/api/admin", adminAlertsRouter);
+app.use("/api/cron", cronRouter);
+app.use("/api/guides", guidesRouter);
+app.use("/api/admin", adminGuidesRouter);
 
 // Unmatched route — JSON 404 instead of Express's default HTML page, so
 // every response from this API (success or failure) is JSON.

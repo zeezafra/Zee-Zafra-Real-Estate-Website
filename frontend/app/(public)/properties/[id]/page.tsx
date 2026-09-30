@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Bath, Bed, Car, MapPin, Ruler } from "lucide-react";
+import { Bath, Bed, Car, FileDown, MapPin, Ruler } from "lucide-react";
 import Link from "next/link";
 import { getPropertyById } from "@/lib/api";
 import { PROPERTY_STATUSES, PROPERTY_TYPES } from "@/lib/types";
@@ -13,6 +13,11 @@ import BookViewingButton from "@/components/site/BookViewingButton";
 import SaveButton from "@/components/site/SaveButton";
 import ShareButtons from "@/components/site/ShareButtons";
 import MoreProperties from "@/components/site/MoreProperties";
+import MortgageCalculator from "@/components/site/MortgageCalculator";
+import PropertyMap from "@/components/site/PropertyMap";
+import VideoTour from "@/components/site/VideoTour";
+import JsonLd from "@/components/site/JsonLd";
+import { propertyJsonLd } from "@/lib/structuredData";
 
 type Props = { params: { id: string } };
 
@@ -71,8 +76,15 @@ export default async function PropertyDetailPage({ params }: Props) {
     { icon: Ruler, label: "Floor Area", value: `${property.sqm} sqm` },
   ].filter(Boolean) as { icon: typeof Bed; label: string; value: string }[];
 
+  // Phase 25: calculator only where a monthly loan payment makes sense.
+  const showCalculator =
+    property.listingType === "FOR_SALE" &&
+    property.status !== "SOLD" &&
+    !isPriceOnRequest(property);
+
   return (
     <>
+      <JsonLd data={propertyJsonLd(property)} />
       <main className="mx-auto max-w-6xl px-6 py-16 lg:px-10">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.6fr_1fr]">
         {/* min-w-0 overrides the Grid default of min-width: auto, which
@@ -90,6 +102,23 @@ export default async function PropertyDetailPage({ params }: Props) {
               {property.description}
             </p>
           </div>
+
+          {/* Phase 25 */}
+          {property.videoUrl && <VideoTour url={property.videoUrl} title={property.title} />}
+          {property.latitude !== null && property.longitude !== null && (
+            <PropertyMap
+              latitude={property.latitude}
+              longitude={property.longitude}
+              title={property.title}
+            />
+          )}
+          {showCalculator && (
+            <MortgageCalculator
+              price={property.price}
+              propertyId={property.id}
+              propertyTitle={property.title}
+            />
+          )}
         </div>
 
         <aside className="h-fit rounded-2xl border border-navy/10 p-6 dark:border-offwhite/10">
@@ -191,6 +220,16 @@ export default async function PropertyDetailPage({ params }: Props) {
             variant="button"
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-navy/20 px-6 py-3 font-semibold text-navy transition hover:border-gold hover:text-gold dark:border-offwhite/20 dark:text-offwhite"
           />
+
+          {/* Phase 26: generated on demand by the backend. */}
+          {process.env.NEXT_PUBLIC_API_URL && (
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL}/api/properties/${property.id}/flyer.pdf`}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border border-navy/20 px-6 py-3 font-semibold text-navy transition hover:border-gold hover:text-gold dark:border-offwhite/20 dark:text-offwhite"
+            >
+              <FileDown size={16} /> Download Flyer (PDF)
+            </a>
+          )}
 
           <ShareButtons
             url={`${SITE_URL}/properties/${property.id}`}

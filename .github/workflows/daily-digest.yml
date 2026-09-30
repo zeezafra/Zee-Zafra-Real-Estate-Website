@@ -1,0 +1,22 @@
+# Sends the daily follow-up digest email. Render's free plan has no
+# scheduler, so this calls the backend's protected endpoint once a day.
+#
+# Setup (GitHub repo > Settings > Secrets and variables > Actions):
+#   API_URL      e.g. https://zee-zafra-properties-api.onrender.com  (no trailing slash)
+#   CRON_SECRET  same value as the CRON_SECRET env var on Render
+#
+# 00:00 UTC = 8:00 AM in Manila. GitHub may delay scheduled runs by a few minutes.
+name: Daily digest
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch: {}
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call digest endpoint
+        run: |
+          curl --fail-with-body --retry 3 --retry-delay 20 --max-time 90 \
+            -X POST "${{ secrets.API_URL }}/api/cron/daily-digest" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

@@ -36,6 +36,11 @@ enum PropertyStatus {
   AVAILABLE
   SOLD
   RESERVED
+  // Phase 27. Hidden from every public endpoint regardless of query
+  // params (enforced in routes/properties.js, not just the frontend's
+  // default filter) — an admin-only "not live yet" state for a listing
+  // that's still being prepared, or is queued to go live at `publishAt`.
+  DRAFT
 }
 
 model Property {
@@ -90,6 +95,36 @@ model Property {
   // `PropertyFavorite` events table, per this project's "start with the
   // simpler counter" precedent.
   favoriteCount Int            @default(0)
+  // Phase 25. Optional map pin for the property page's map + "nearby"
+  // links. Plain Float pair (WGS84 decimal degrees, what Google Maps'
+  // right-click "copy coordinates" gives) rather than a PostGIS type —
+  // nothing here needs spatial queries, just a pin. Both null = no map
+  // shown; the validator requires them to be set together.
+  latitude      Float?
+  longitude     Float?
+  // Phase 25. Optional video / virtual tour link (YouTube, Vimeo or
+  // Facebook video/reel). Stored as the URL the admin pasted; the
+  // frontend (lib/video.ts) decides whether it can embed it or should
+  // show a plain link instead.
+  videoUrl      String?
+  // Phase 26. Stamped the first time new-listing alert emails are sent for
+  // this property, so editing a listing later (or flipping it
+  // RESERVED -> AVAILABLE) can never email the same subscribers twice.
+  alertsSentAt  DateTime?
+  // Phase 27. Meaningful only while status is DRAFT: the moment
+  // routes/cron.js's publish-scheduled job flips the listing to
+  // AVAILABLE and clears this back to null. Null + DRAFT means "draft,
+  // publish manually whenever" rather than "not yet scheduled and never
+  // will be" — the admin form just never showed a date.
+  publishAt     DateTime?
+  // Trust & polish (Recently Sold / Rented archive). The date the deal
+  // closed, shown as "Sold — March 2026" on /sold and the homepage strip.
+  // Auto-stamped by the admin routes the first time status becomes SOLD
+  // and cleared if the listing goes back to AVAILABLE/RESERVED. The admin
+  // form also lets Zee set it by hand, so deals closed BEFORE the site
+  // existed can be backdated into the track record. A FOR_RENT listing
+  // that is SOLD reads as "Rented" in the UI — no new enum value needed.
+  soldAt        DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   // Phase 10: inquiries that named this property. Purely a reverse lookup —
@@ -148,6 +183,12 @@ model Post {
   // instead of the array Property.images uses.
   coverImage String?
   published  Boolean  @default(true)
+  // Phase 27. Same scheduling shape as Property.publishAt above: set this
+  // and leave `published` false to have routes/cron.js flip it to
+  // published: true automatically once the time arrives. Superseded by
+  // the schema comment above this model, which predates scheduling
+  // support and said it didn't exist yet.
+  publishAt  DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -288,4 +329,47 @@ model InquiryNote {
   type      InquiryNoteType @default(MANUAL)
   content   String          @db.Text
   createdAt DateTime        @default(now())
+}
+
+// Phase 26. A visitor's saved search for new-listing email alerts. Every
+// criteria column is optional: null means "any". Double opt-in — a row is
+// inert until `confirmedAt` is set via the emailed link — and the one
+// random `token` doubles as the confirm and unsubscribe credential (it is
+// only ever sent to the address that owns the row). Unsubscribing deletes
+// the row outright rather than flagging it: there is nothing worth keeping
+// about someone who asked to be forgotten.
+model SavedSearch {
+  id             String        @id @default(cuid())
+  email          String
+  name           String?
+  location       String?
+  type           PropertyType?
+  listingType    ListingType?
+  minPrice       Int?
+  maxPrice       Int?
+  minBeds        Int?
+  token          String        @unique
+  confirmedAt    DateTime?
+  lastNotifiedAt DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([email])
+  @@index([confirmedAt])
+}
+
+// Trust & polish. Email-gated buyer/seller guides (lead magnet). One row per
+// (email, guide) — asking for the same guide twice doesn't create a second
+// lead. `guide` is a slug from backend/src/lib/guides.js. Separate from
+// Inquiry on purpose: a checklist download is a much colder lead than a
+// viewing request and shouldn't inflate the inquiry inbox or its
+// conversion analytics.
+model GuideLead {
+  id        String   @id @default(cuid())
+  email     String
+  name      String?
+  guide     String
+  createdAt DateTime @default(now())
+
+  @@unique([email, guide])
+  @@index([createdAt])
 }

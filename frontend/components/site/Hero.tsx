@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import TopNav from "./TopNav";
 import BookViewingButton from "./BookViewingButton";
+import IntroVideoButton from "./IntroVideoButton";
+import T from "@/components/i18n/T";
 
 // UI/UX Phase 2 (Hero Section Refinement). Phase 5 built this section's
 // structure with placehold.co stand-ins; a later session swapped in real
@@ -64,14 +66,17 @@ export default function Hero() {
           </div>
 
           <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-offwhite drop-shadow-[0_2px_10px_rgba(11,31,58,0.55)] sm:text-5xl lg:text-6xl">
-            Find the right property.
+            <T id="hero.line1">Find the right property.</T>
             <br />
-            <span className="text-gold">Build your future.</span>
+            <span className="text-gold">
+              <T id="hero.line2">Build your future.</T>
+            </span>
           </h1>
 
           <p className="mt-5 max-w-md text-pretty text-base text-offwhite/85 sm:text-lg">
-            I help clients buy, sell, and invest in properties that fit their
-            lifestyle and goals — from dream homes to smart investments.
+            <T id="hero.sub">
+              {"I help clients buy, sell, and invest in properties that fit their lifestyle and goals — from dream homes to smart investments."}
+            </T>
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-4">
@@ -79,12 +84,15 @@ export default function Hero() {
               href="/properties"
               className="flex items-center gap-2 rounded-full bg-gold px-7 py-3.5 text-base font-semibold text-navy shadow-lg shadow-navy/30 transition hover:bg-gold-light hover:shadow-xl"
             >
-              Browse Properties
+              <T id="hero.browse">Browse Properties</T>
               <ArrowRight size={16} />
             </Link>
             <BookViewingButton
               className="flex items-center gap-2 rounded-full border border-offwhite/50 px-7 py-3.5 text-base font-semibold text-offwhite backdrop-blur-sm transition hover:border-gold hover:text-gold"
             />
+            {/* Trust & polish: a lower-emphasis third option, not a third
+                button — and it only renders once INTRO_VIDEO_URL is set. */}
+            <IntroVideoButton />
           </div>
         </div>
       </div>

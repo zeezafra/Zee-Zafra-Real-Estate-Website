@@ -7,6 +7,67 @@ Render) and `frontend/` (Next.js App Router + Tailwind, on Vercel). See
 `references/roadmap.md` (in the `personal-real-estate-website-builder`
 skill) for the full phase-by-phase plan.
 
+## Latest change (Trust & polish — five features, off-roadmap)
+Requested by Zee. Not a numbered phase on either track.
+
+1. **Recently Sold / Rented archive.** `Property.soldAt` (nullable DateTime,
+   migration `20260930090000_add_sold_archive_and_guide_leads`, backfills
+   existing SOLD rows from `updatedAt`). No new enum value: a SOLD listing
+   with `listingType = FOR_RENT` reads as "Rented". Admin routes auto-stamp
+   `soldAt` when status becomes SOLD (never overwriting a hand-entered one),
+   clear it when it leaves SOLD, and accept an explicit `soldAt` (future dates
+   rejected). `GET /api/properties/sold` (public, declared before `/:id`).
+   Frontend: `SoldCard`, `RecentlySold` homepage strip (renders nothing until
+   one listing is SOLD), `/sold` page, sitemap entry, "Date sold" field in
+   the admin property form. Closing prices hidden unless
+   `SHOW_SOLD_PRICES` is flipped in `siteConfig.ts`.
+2. **Testimonials.** `TESTIMONIALS` is now typed (photo, Google/Facebook
+   source + link) and EMPTY — the three `[Client name]` placeholders are gone
+   and `/testimonials` shows a composed empty state. `REVIEW_LINKS` (google /
+   facebook, both "" for now) drives `ReviewButtons`; an empty URL hides the
+   button. About-page credentials still holding `[Add …]` are hidden (the
+   whole block disappears until at least one is real).
+3. **Tagalog / Cebuano toggle.** Client-side: `LanguageProvider` +
+   `<T id>` + `useT()` + `LanguageToggle` (in `Sidebar`, so it also appears in
+   the mobile drawer), dictionary in `lib/i18n/dictionary.ts`. English text
+   stays in the markup, so SSR/SEO are unchanged; the saved choice applies
+   after hydration (brief English flash for returning TL/CEB visitors).
+   Covered: nav, hero, category strip, CTA banner, inquiry modal, and the new
+   sold / testimonials / guides / video UI. NOT covered: listings, blog,
+   About bio, Services, Contact, Sell, ViewingModal, legal pages.
+4. **Email-gated guides.** `GuideLead` model (unique email+guide),
+   `POST /api/guides` (rate-limited, Turnstile, honeypot, slug allow-list in
+   `backend/src/lib/guides.js`), owner notification via Resend, admin
+   `GET/DELETE /api/admin/guide-leads` + `/admin/guide-leads` page. Two
+   4-page PDFs built by `tools/build-guides.py` into `frontend/public/guides/`.
+   Soft gate: the PDFs are static files; the value is the captured email.
+   `/guides` page + homepage section.
+5. **Hero video.** `IntroVideoButton` in the Hero, driven by
+   `INTRO_VIDEO_URL` in `siteConfig.ts` (YouTube/Vimeo/Facebook play in a
+   pop-up via existing `lib/video.ts`; other https URLs open in a new tab).
+   Renders nothing while the URL is "".
+
+**Verified:** frontend `npx tsc --noEmit` and `npx next build` clean (new
+routes `/sold`, `/guides`, `/admin/guide-leads`); `node --check` on every
+touched backend file; `POST /api/guides` driven against stubbed
+Prisma/Resend/Turnstile (valid, duplicate, bad email, bad slug all behaved;
+the honeypot branch was not reached because the burst rate limiter
+answered first). **Not verified:** `npx prisma validate` and the migration
+(binaries.prisma.sh is blocked in the sandbox), the `/sold` query and admin
+`soldAt` logic against a real database, the language toggle and video
+pop-up in a browser.
+
+**Still outstanding:**
+- Run the migration (`npx prisma migrate deploy` on Render / `migrate dev`
+  locally) before deploying the backend.
+- Fill `REVIEW_LINKS`, `INTRO_VIDEO_URL`; add real testimonials and
+  credentials; supply the Cebuano/Tagalog read-through (first drafts).
+- `/privacy` should mention guide-download emails (legal text is Zee's).
+- Have a lawyer/BIR-savvy person skim the two PDFs before promoting them.
+- Guide leads are not emailed the PDF (Resend can only send to the account
+  owner until a domain is verified); they get an instant download instead.
+- `ViewingModal`, `/contact`, `/sell`, `/services` remain English-only.
+
 ## Latest change (Resend inquiry notifications)
 Off-roadmap, requested by Zee: email him when an inquiry comes in, using
 Resend. An extension of Build Phase 10 lead capture, not a numbered phase

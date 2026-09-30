@@ -4,6 +4,7 @@ import { ArrowUpRight, Bath, Bed, Car, MapPin, Ruler } from "lucide-react";
 import type { Property } from "@/lib/types";
 import { formatPrice, formatRefNo, isPriceOnRequest, isPriceReduced } from "@/lib/format";
 import SaveButton from "./SaveButton";
+import CompareButton from "./CompareButton";
 
 // Points at a real route even though /properties/[id] doesn't exist until
 // Phase 7 — same forward-reference pattern Phase 5 used for "Browse
@@ -129,6 +130,8 @@ export default function PropertyCard({ property }: { property: Property }) {
       </Link>
 
       <SaveButton propertyId={property.id} className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-navy/60 text-offwhite backdrop-blur transition hover:bg-navy/80" />
+      {/* Phase 26 */}
+      <CompareButton propertyId={property.id} />
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { Facebook, Instagram, Linkedin, Mail } from "lucide-react";
 import ThemeToggle from "../theme/ThemeToggle";
 import SavedListingsLink from "./SavedListingsLink";
+import LanguageToggle from "../i18n/LanguageToggle";
+import T from "../i18n/T";
 import { AGENT, NAV_LINKS, SOCIAL_LINKS } from "@/lib/siteConfig";
 
 const SOCIAL_ICONS = {
@@ -49,7 +51,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-sm text-offwhite/60">{AGENT.role}</p>
         <p className="mt-2 flex items-center gap-1.5 text-xs text-offwhite/70">
           <span className="h-2 w-2 rounded-full bg-green-400" />
-          Available for inquiries
+          <T id="nav.available">Available for inquiries</T>
         </p>
       </div>
 
@@ -68,7 +70,7 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                   : "border-transparent text-offwhite/70 hover:border-offwhite/30 hover:bg-white/5 hover:text-offwhite"
               }`}
             >
-              {link.label}
+              <T id={`nav.${link.href}`}>{link.label}</T>
             </Link>
           );
         })}
@@ -96,13 +98,22 @@ export default function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <ThemeToggle />
       </div>
 
-      <p className="mt-6 text-center text-xs italic text-offwhite/40">{AGENT.tagline}</p>
+      {/* Trust & polish: EN | TL | CEB. Lives here (not the mobile
+          header) because the drawer reuses this component, and the header
+          has no spare width at 360px. */}
+      <div className="mt-5 flex justify-center">
+        <LanguageToggle variant="dark" />
+      </div>
+
+      <p className="mt-5 text-center text-xs italic text-offwhite/40">
+        <T id="nav.tagline">{AGENT.tagline}</T>
+      </p>
       <Link
         href="/privacy"
         onClick={onNavigate}
         className="mt-2 block text-center text-xs text-offwhite/40 underline-offset-2 hover:text-offwhite/70 hover:underline"
       >
-        Privacy Policy
+        <T id="nav.privacy">Privacy Policy</T>
       </Link>
     </div>
   );

@@ -32,6 +32,30 @@ const PROPERTY_SELECT = {
   status: true,
 };
 
+// GET /api/admin/inquiries/viewings
+// Phase 27. Every inquiry that carries a viewing preference — the calendar
+// page groups these by preferredDate itself, so this just returns the flat
+// list (not archived/spam) with enough property context to render a chip.
+// Small dataset for a single-agent site, so no server-side month windowing
+// yet — the frontend narrows to the visible month client-side, same
+// "simple until volume justifies more structure" call as elsewhere in this
+// codebase. Declared before "/inquiries/stats" would also work since
+// Express matches literal segments before params either way, but kept
+// grouped with the other fixed-path GETs for readability.
+router.get("/inquiries/viewings", requireAdmin, async (req, res) => {
+  try {
+    const viewings = await prisma.inquiry.findMany({
+      where: { archived: false, spam: false, preferredDate: { not: null } },
+      orderBy: [{ preferredDate: "asc" }, { preferredTime: "asc" }],
+      include: { property: { select: PROPERTY_SELECT } },
+    });
+    res.json(viewings);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch viewings" });
+  }
+});
+
 // GET /api/admin/inquiries/stats
 // Phase 19. Deliberately its own endpoint rather than derived from the
 // (filtered) list response — the stats bar always reflects the whole
@@ -85,47 +109,54 @@ router.get("/inquiries/stats", requireAdmin, async (req, res) => {
   }
 });
 
+// Phase 26. The list endpoint's filter logic, lifted out unchanged so the
+// CSV export below applies exactly the same filters as what's on screen.
+function buildInquiryWhere(query) {
+  const { type, status, q, dateFrom, dateTo, archived, spam } = query;
+  // Phase 20: spam is opt-in exactly like archived — the default inbox
+  // shows neither, and ?spam=true is the Spam review view. Kept as its
+  // own axis rather than a status value so un-flagging a false positive
+  // restores the lead with its real pipeline status intact.
+  const where = { archived: archived === "true", spam: spam === "true" };
+
+  if (INQUIRY_TYPES.includes(type)) {
+    where.type = type;
+  }
+
+  if (INQUIRY_STATUSES.includes(status)) {
+    where.status = status;
+  }
+
+  if (typeof q === "string" && q.trim()) {
+    const term = q.trim();
+    where.OR = [
+      { name: { contains: term, mode: "insensitive" } },
+      { email: { contains: term, mode: "insensitive" } },
+      { phone: { contains: term, mode: "insensitive" } },
+      { property: { title: { contains: term, mode: "insensitive" } } },
+    ];
+  }
+
+  const createdAt = {};
+  if (typeof dateFrom === "string" && DATE_RE.test(dateFrom)) {
+    createdAt.gte = new Date(`${dateFrom}T00:00:00`);
+  }
+  if (typeof dateTo === "string" && DATE_RE.test(dateTo)) {
+    createdAt.lte = new Date(`${dateTo}T23:59:59.999`);
+  }
+  if (Object.keys(createdAt).length > 0) {
+    where.createdAt = createdAt;
+  }
+  return where;
+}
+
 // GET /api/admin/inquiries
 // ?archived=true opts INTO the archive view instead of the default
 // active-only list — mirrors the "explicit opt-in" shape of the other
 // filters here rather than a toggle that's easy to forget is on.
 router.get("/inquiries", requireAdmin, async (req, res) => {
   try {
-    const { type, status, q, dateFrom, dateTo, archived, spam } = req.query;
-    // Phase 20: spam is opt-in exactly like archived — the default inbox
-    // shows neither, and ?spam=true is the Spam review view. Kept as its
-    // own axis rather than a status value so un-flagging a false positive
-    // restores the lead with its real pipeline status intact.
-    const where = { archived: archived === "true", spam: spam === "true" };
-
-    if (INQUIRY_TYPES.includes(type)) {
-      where.type = type;
-    }
-
-    if (INQUIRY_STATUSES.includes(status)) {
-      where.status = status;
-    }
-
-    if (typeof q === "string" && q.trim()) {
-      const term = q.trim();
-      where.OR = [
-        { name: { contains: term, mode: "insensitive" } },
-        { email: { contains: term, mode: "insensitive" } },
-        { phone: { contains: term, mode: "insensitive" } },
-        { property: { title: { contains: term, mode: "insensitive" } } },
-      ];
-    }
-
-    const createdAt = {};
-    if (typeof dateFrom === "string" && DATE_RE.test(dateFrom)) {
-      createdAt.gte = new Date(`${dateFrom}T00:00:00`);
-    }
-    if (typeof dateTo === "string" && DATE_RE.test(dateTo)) {
-      createdAt.lte = new Date(`${dateTo}T23:59:59.999`);
-    }
-    if (Object.keys(createdAt).length > 0) {
-      where.createdAt = createdAt;
-    }
+    const where = buildInquiryWhere(req.query);
 
     const inquiries = await prisma.inquiry.findMany({
       where,
@@ -136,6 +167,54 @@ router.get("/inquiries", requireAdmin, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch inquiries" });
+  }
+});
+
+
+// Phase 26. CSV cells starting with = + - @ (or tab/CR) are executed as
+// formulas by Excel/Sheets — a visitor-supplied name like "=HYPERLINK(...)"
+// would run on Zee's machine. Prefixing a single quote defuses it.
+function csvCell(value) {
+  if (value === null || value === undefined) return "";
+  let text = value instanceof Date ? value.toISOString() : String(value);
+  if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+// GET /api/admin/inquiries/export.csv — same filters as the list. Declared
+// before "/inquiries/:id" so "export.csv" isn't matched as an :id.
+router.get("/inquiries/export.csv", requireAdmin, async (req, res) => {
+  try {
+    const inquiries = await prisma.inquiry.findMany({
+      where: buildInquiryWhere(req.query),
+      orderBy: { createdAt: "desc" },
+      include: { property: { select: PROPERTY_SELECT } },
+    });
+
+    const header = [
+      "Received", "Type", "Status", "Name", "Email", "Phone", "Property Ref", "Property",
+      "Source", "Preferred Viewing Date", "Preferred Viewing Time", "Next Follow-up",
+      "Last Contacted", "Closed At", "Archived", "Spam", "Message",
+    ];
+    const rows = inquiries.map((i) => [
+      i.createdAt, i.type, i.status, i.name, i.email, i.phone,
+      i.property ? `ZZ-${String(i.property.refNo).padStart(4, "0")}` : "",
+      i.property ? i.property.title : "",
+      i.source, i.preferredDate, i.preferredTime, i.nextFollowUpDate,
+      i.lastContactedAt, i.closedAt, i.archived ? "yes" : "no", i.spam ? "yes" : "no", i.message,
+    ]);
+
+    // BOM so Excel opens UTF-8 (₱, accents, Filipino names) correctly.
+    const body = "\uFEFF" + [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="inquiries-${todayManilaISODate()}.csv"`
+    );
+    res.send(body);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to export inquiries" });
   }
 });
 

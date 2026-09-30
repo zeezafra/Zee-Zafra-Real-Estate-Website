@@ -1,26 +1,16 @@
 import { notFound } from "next/navigation";
-import type { Property } from "@/lib/types";
+import { getAdminProperty } from "@/lib/adminAuth";
 import PropertyForm from "../../PropertyForm";
-
-async function getProperty(id: string): Promise<Property | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) return null;
-
-  try {
-    const res = await fetch(`${apiUrl}/api/properties/${id}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return (await res.json()) as Property;
-  } catch {
-    return null;
-  }
-}
 
 export default async function EditPropertyPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const property = await getProperty(params.id);
+  // Phase 27: authenticated fetch (not the public route) — a DRAFT
+  // listing 404s on the public GET /api/properties/:id, so editing one
+  // needs the admin-scoped endpoint instead.
+  const property = await getAdminProperty(params.id);
   if (!property) {
     notFound();
   }

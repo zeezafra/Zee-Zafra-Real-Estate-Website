@@ -4,6 +4,7 @@ const inquiryRateLimit = require("../middleware/inquiryRateLimit");
 const { verifyTurnstile } = require("../lib/turnstile");
 const { detectSpam } = require("../lib/spamFilter");
 const { notifyNewInquiry } = require("../lib/inquiryNotification");
+const { sendAutoReply } = require("../lib/autoReply");
 
 const router = express.Router();
 
@@ -300,6 +301,8 @@ router.post("/", inquiryRateLimit, async (req, res) => {
       // returned earlier without reaching this line — Zee was already
       // told about that lead.
       notifyNewInquiry(inquiry);
+      // Phase 26: thank-you email to the visitor. Same fire-and-forget rules.
+      sendAutoReply(inquiry);
     }
 
     res.status(201).json({ id: inquiry.id, createdAt: inquiry.createdAt });
