@@ -29,7 +29,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
     return null;
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
   if (!apiUrl) {
     return null;
@@ -119,7 +119,7 @@ export async function getAdminInquiries(
   filters: AdminInquiryFilters = {}
 ): Promise<AdminInquiry[]> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
   if (!token || !apiUrl) {
     return [];
@@ -156,7 +156,7 @@ export async function getAdminInquiries(
 // "not found" state instead of crashing.
 export async function getAdminInquiry(id: string): Promise<AdminInquiry | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
   if (!token || !apiUrl) {
     return null;
@@ -183,7 +183,7 @@ export async function getAdminInquiry(id: string): Promise<AdminInquiry | null> 
 // than showing zeroes that could be mistaken for a real empty inbox.
 export async function getAdminInquiryStats(): Promise<InquiryStats | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
   if (!token || !apiUrl) {
     return null;
@@ -212,7 +212,7 @@ export async function getAdminInquiryStats(): Promise<InquiryStats | null> {
 // half-populated charts.
 export async function getAdminAnalytics(days: number): Promise<InquiryAnalytics | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
   if (!token || !apiUrl) {
     return null;
@@ -241,7 +241,7 @@ export async function getAdminAnalytics(days: number): Promise<InquiryAnalytics 
 // call the public endpoint, since drafts only ever show up here.
 export async function getAdminPosts(): Promise<Post[]> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
   if (!token || !apiUrl) {
     return [];
@@ -268,7 +268,7 @@ export async function getAdminPosts(): Promise<Post[]> {
 // subscribers.
 export async function getAdminAlerts(): Promise<SavedSearchRow[] | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!token || !apiUrl) return null;
 
   try {
@@ -287,7 +287,7 @@ export async function getAdminAlerts(): Promise<SavedSearchRow[] | null> {
 // say "couldn't load" instead of an empty list that reads as zero leads.
 export async function getAdminGuideLeads(): Promise<GuideLeadRow[] | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!token || !apiUrl) return null;
 
   try {
@@ -307,7 +307,7 @@ export async function getAdminGuideLeads(): Promise<GuideLeadRow[] | null> {
 // excludes. Backs the admin dashboard table and the edit page.
 export async function getAdminProperties(): Promise<Property[]> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!token || !apiUrl) return [];
 
   try {
@@ -324,7 +324,7 @@ export async function getAdminProperties(): Promise<Property[]> {
 
 export async function getAdminProperty(id: string): Promise<Property | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!token || !apiUrl) return null;
 
   try {
@@ -345,7 +345,7 @@ export async function getAdminProperty(id: string): Promise<Property | null> {
 // empty calendar that looks like there's nothing booked.
 export async function getAdminViewings(): Promise<ViewingInquiry[] | null> {
   const token = cookies().get(ADMIN_COOKIE_NAME)?.value;
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
   if (!token || !apiUrl) return null;
 
   try {

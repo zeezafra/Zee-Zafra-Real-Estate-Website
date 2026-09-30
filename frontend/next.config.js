@@ -15,6 +15,18 @@ const nextConfig = {
       { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
+  // Deployment fix: the admin session cookie is set by the API (Render) but
+  // read by Next's server components (Vercel). A cookie set by another
+  // domain is never sent to this one, so the dashboard bounced back to
+  // login. Fix: the browser talks to /api/* on THIS domain (set
+  // NEXT_PUBLIC_API_URL to the site's own URL) and Next proxies it to the
+  // real backend (API_INTERNAL_URL, server-side only). Cookie becomes
+  // first-party. Unset API_INTERNAL_URL (local dev) and no proxy is added.
+  async rewrites() {
+    const backend = (process.env.API_INTERNAL_URL || "").replace(/\/+$/, "");
+    if (!backend) return [];
+    return [{ source: "/api/:path*", destination: `${backend}/api/:path*` }];
+  },
   // Phase 11 hardening — baseline headers a security/Lighthouse pass checks
   // for. Deliberately not a full Content-Security-Policy here: a CSP needs
   // to explicitly list every external source (Cloudinary images, any fonts

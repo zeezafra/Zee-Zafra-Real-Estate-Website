@@ -27,7 +27,9 @@ const PORT = process.env.PORT || 4000;
 // as coming from the proxy's IP instead of the real client, which defeats
 // per-IP limiting entirely. It's also what makes req.ip correct, which
 // Turnstile verification passes through as `remoteip`.
-app.set("trust proxy", 1);
+// 2 hops: Render's load balancer + the Vercel proxy in front of it, so
+// req.ip is the real visitor (rate limits, Turnstile remoteip).
+app.set("trust proxy", 2);
 
 app.use(corsMiddleware);
 app.use(express.json());

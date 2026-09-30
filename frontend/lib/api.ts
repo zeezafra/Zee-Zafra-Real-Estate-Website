@@ -4,7 +4,7 @@ import type { Area, Post, Property, SoldProperty } from "./types";
 // involved (unlike lib/adminAuth.ts), so these are safe to call from plain
 // server components and can lean on Next's fetch cache/revalidation instead
 // of "no-store".
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
 // GET /api/properties?featured=true — homepage featured grid (Phase 6).
 // Revalidates every 60s so toggling `featured` in the admin panel shows up
