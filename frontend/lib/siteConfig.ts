@@ -238,7 +238,7 @@ export const REVIEW_LINKS = {
 // Vimeo, or Facebook video/reel URL. Empty = no button is shown at all.
 // (YouTube/Vimeo/Facebook play inside a pop-up; any other https link opens
 // in a new tab.)
-export const INTRO_VIDEO_URL = "https://www.youtube.com/watch?v=DJJos7u5qlk&list=RDMMnxMokRj0bl8&index=8";
+export const INTRO_VIDEO_URL = "https://www.youtube.com/watch?v=_8mVqdhSvvo&t=17s";
 
 // Trust & polish. Whether the Recently Sold / Rented cards show the closing
 // price. Off by default: a sold price is the client's business, and the
